@@ -3,7 +3,9 @@ Project for Computational Fluid Dynamics Lab course.
 
 Group 6: Nathan Brei, Irving Cabrera, Natalia Saiapova.
 
-[[Watch the video]](https://raw.githubusercontent.com/nasay/cfdlab/master/project/videos/wall500100.ogv)
+[[Watch the video 1]](https://raw.githubusercontent.com/nasay/cfdlab/master/project/videos/wall500100.ogv)
+
+[[Watch the video 2]](https://raw.githubusercontent.com/nasay/cfdlab/master/project/videos/broken_wall100-1-volume.ogv)
 
 ## Compilation.
 
