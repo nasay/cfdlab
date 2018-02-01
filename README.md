@@ -14,7 +14,7 @@ Use ```make``` command to compile:
 >> make
 ```
 
-There is debug mode available. This mode includes additional checks for velocity and density, computes total mass in the domain and checks that there is no FLUID cell that is neighboring with a GAS cell directly. Also it calculates a time spent on the following parts: streaming, collision, flag updating and boundary treatment. 
+There is debug mode available. This mode includes additional checks for velocity and density, computes total mass in the domain and checks that there is no FLUID cell which is neighboring with a GAS cell directly. Also, it calculates the time spent on the following parts: streaming, collision, flag update and boundary treatment. 
 ```
 >> make debug
 ```
@@ -26,7 +26,7 @@ To run the program use
 For each example it is required to have ```<exampleName>.dat``` and ```<exampleName>.pgm``` files. They have to be placed in the ```examples``` directory.
 ```<number of threads>``` specifies how many threads will be used by OpenMP.
 
-Output is vtk-files and they can be found in the ```vtk-output``` directory (if thare is no such directory it will be created).
+The ```vtk-output``` directory contains vtk output files. If thare is no such directory it will be created.
 
 ### Description of input files
 We added a few new fields to the ```input.dat``` file:
@@ -41,8 +41,8 @@ We added a few new fields to the ```input.dat``` file:
 
 ## What we have done
 
-####New cell types
-First of all we added 2 new cell types: ```FLUID``` and ```INTERFACE```.
+#### New cell types
+First of all, we added 2 new cell types: ```FLUID``` and ```INTERFACE```.
 Here is table representing cell types, which should be used in ```<exampleName>.pgm``` file:
 
 | Cell type | Value | Cell type | Value
