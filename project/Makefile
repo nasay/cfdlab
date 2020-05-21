@@ -3,13 +3,13 @@ SOURCES=initLB.c visualLB.c boundary.c collision.c streaming.c computeCellValues
 
 # Compiler
 # --------
-CC=gcc
+CC=dpcpp
 
-CFLAGS=-Wpedantic -Wall -std=c99 -O3 -lpthread -fopenmp -msse2
+CFLAGS=-Wpedantic -Wall -O3 -fsycl
 
 # Linker flags
 # ------------
-LDFLAGS = -lm -lpthread -fopenmp -lrt -ldl
+LDFLAGS = -lm -lpthread -lrt -ldl
 
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=lbsim

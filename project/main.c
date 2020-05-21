@@ -1,8 +1,6 @@
 #ifndef _MAIN_C_
 #define _MAIN_C_
 
-#include <omp.h>
-
 #include "collision.h"
 #include "streaming.h"
 #include "initLB.h"
@@ -11,6 +9,8 @@
 #include "flag.h"
 #include "checks.h"
 
+#include <chrono>
+
 int main(int argc, char *argv[]){
     int length[3], timesteps, timestepsPerPlotting, boundaries[6], r, t, n_threads, i;
 
@@ -18,18 +18,18 @@ int main(int argc, char *argv[]){
     float velocity[3], ro_in, ro_ref;
     float *swap=NULL;
 
-    double start_time, total_time = 0;
-    double elapsed_time, mlups;
+    std::chrono::duration<double> total_time {0.0};
+    std::chrono::duration<double> elapsed_time;
+    double mlups;
 
     char problem[10];
 
     #ifdef DEBUG
-    double streamingTime = 0.0;
-    double collisionTime = 0.0;
-    double boundaryTime = 0.0;
-    double flagTime = 0.0;
+    std::chrono::duration<double> streamingTime {0.0};
+    std::chrono::duration<double> collisionTime {0.0};
+    std::chrono::duration<double> boundaryTime {0.0};
+    std::chrono::duration<double> flagTime {0.0};
     #endif
-
 
     /* Read the file of parameters */
     readParameters(length, &tau, velocity, extForces, &timesteps, &timestepsPerPlotting,
@@ -80,24 +80,25 @@ int main(int argc, char *argv[]){
                      length, boundaries, r, argv, & num_fluid_cells);
 
     #ifdef DEBUG
-    boundaryTime -= omp_get_wtime();
+    boundaryTime -= std::chrono::steady_clock::now ();
     #endif
     treatBoundary(collideField, flagField, problem, &Re, &ro_ref, &ro_in, velocity, length, n_threads);
     #ifdef DEBUG
-    boundaryTime += omp_get_wtime();
+    boundaryTime += std::chrono::steady_clock::now ();
     #endif
 
-    start_time = omp_get_wtime();  // Start the timer for the lattice updates
+    // Start the timer for the lattice updates.
+    auto start_time = std::chrono::steady_clock::now();
 
     for (t = 0; t < timesteps; t++) {
 
         /* Streaming step */
         #ifdef DEBUG
-        streamingTime -= omp_get_wtime();
+        streamingTime -= std::chrono::steady_clock::now ();
         #endif
         doStreaming(collideField, streamField, flagField, massField, fractionField, length, n_threads, exchange);
         #ifdef DEBUG
-        streamingTime += omp_get_wtime();
+        streamingTime += std::chrono::steady_clock::now ();
         #endif
 
         swap = collideField;
@@ -106,45 +107,45 @@ int main(int argc, char *argv[]){
 
         /* Collision step */
         #ifdef DEBUG
-        collisionTime -= omp_get_wtime();
+        collisionTime -= std::chrono::steady_clock::now ();
         #endif
         doCollision(collideField, flagField, massField, fractionField, &tau, length, extForces, n_threads);
         #ifdef DEBUG
-        collisionTime += omp_get_wtime();
+        collisionTime += std::chrono::steady_clock::now ();
         #endif
 
         /* Updating flags */
         #ifdef DEBUG
-        flagTime -= omp_get_wtime();
+        flagTime -= std::chrono::steady_clock::now ();
         #endif
         updateFlagField(collideField, flagField, fractionField, filledCells, emptiedCells, length, n_threads);
         #ifdef DEBUG
-        flagTime += omp_get_wtime();
+        flagTime += std::chrono::steady_clock::now ();
         #endif
 
         /* Updating boundaries */
         #ifdef DEBUG
-        boundaryTime -= omp_get_wtime();
+        boundaryTime -= std::chrono::steady_clock::now ();
         #endif
         treatBoundary(collideField, flagField, problem, &Re, &ro_ref, &ro_in, velocity, length, n_threads);
         #ifdef DEBUG
-        boundaryTime += omp_get_wtime();
+        boundaryTime += std::chrono::steady_clock::now ();
         #endif
 
         if (t % timestepsPerPlotting == 0) {
-            total_time += omp_get_wtime() - start_time ; // Add elapsed ticks to total_time
+            total_time += std::chrono::steady_clock::now () - start_time ; // Add elapsed ticks to total_time
             #ifdef DEBUG
                 run_checks(collideField, massField, flagField, length, t );
             #endif
             writeVtkOutput(collideField, flagField, argv[1], t, length);
             printf("Time step %i finished, vtk file was created\n", t);
-            start_time = omp_get_wtime();  // Start the timer for the lattice updates
+            start_time = std::chrono::steady_clock::now ();  // Start the timer for the lattice updates
         }
     }
 
     /* Compute average mega-lattice-updates-per-second in order to judge performance */
-    elapsed_time = total_time; 
-    mlups = num_fluid_cells * timesteps / (elapsed_time*1000000);
+    elapsed_time = total_time;
+    mlups = num_fluid_cells * timesteps / (elapsed_time.count () * 1000000);
     printf("Average MLUPS = %f\nElapsed time (excluding vtk writes) = %10.2f\n", mlups, elapsed_time);
 
     #ifdef DEBUG

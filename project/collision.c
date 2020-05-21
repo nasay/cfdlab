@@ -1,12 +1,11 @@
 #include "helper.h"
 #include "collision.h"
-#include <omp.h>
 
 /* Dotprod function, calcuales the dot product of two vectors */
 float dotProd (const float * array1, float * array2, int length){
     int i;
     float product =0;
-    
+
     for (i = 0; i < length; ++i){
         product += array1[i] * array2[i];
     }

@@ -1,7 +1,6 @@
 #include "LBDefinitions.h"
 #include "computeCellValues.h"
 #include <stdio.h>
-#include <omp.h>
 
 void computeDensity(const float *const currentCell, float *density){
     /*

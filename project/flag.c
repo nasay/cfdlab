@@ -2,7 +2,6 @@
 #include "helper.h"
 #include "flag.h"
 #include "computeCellValues.h"
-#include <omp.h>
 
 void makeAvgDistFn(float * collideField, int * flagField, int * n, int * cell) {
     /*

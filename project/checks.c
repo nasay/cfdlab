@@ -2,7 +2,6 @@
 #include "computeCellValues.h"
 #include "LBDefinitions.h"
 #include "checks.h"
-#include <omp.h>
 
 
 void check_in_rank(float *collideField, int *flagField, int * length, int t){

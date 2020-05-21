@@ -2,7 +2,6 @@
 #include "helper.h"
 #include "LBDefinitions.h"
 #include "computeCellValues.h"
-#include <omp.h>
 
 /* doStremingCell: performs the streaming operation for one cell, in fact each cell receives all the streaming from the neighbor cells */
 void doStremingCell(float * collideField, float * streamField, int * flagField, float * massField, float * fractionField, int * node, float * el, int * n, int isInterface, int isFluid, float exchange) {
