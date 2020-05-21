@@ -7,16 +7,14 @@
 #include "visualLB.h"
 #include "boundary.h"
 #include "flag.h"
+#include "utils.h"
 #include "checks.h"
 
 #include <chrono>
 
 int main(int argc, char *argv[]){
-    int length[3], timesteps, timestepsPerPlotting, boundaries[6], r, t, n_threads, i;
-
-    float tau, extForces[3], exchange;
-    float velocity[3], ro_in, ro_ref;
-    float *swap=NULL;
+    float *swap = nullptr;
+    Config config;
 
     std::chrono::duration<double> total_time {0.0};
     std::chrono::duration<double> elapsed_time;
@@ -32,11 +30,10 @@ int main(int argc, char *argv[]){
     #endif
 
     /* Read the file of parameters */
-    readParameters(length, &tau, velocity, extForces, &timesteps, &timestepsPerPlotting,
-                   argc, argv, problem, &ro_ref, &ro_in, boundaries, &r, &n_threads, &exchange);
+    readParameters (config, argc, argv);
 
     /* Domain size */
-    int n[3] = { length[0] + 2, length[1] + 2, length[2] + 2 };
+    int n[3] = { config.length[0] + 2, config.length[1] + 2, config.length[2] + 2 };
 
     double num_fluid_cells = 2 * (n[0] + n[1] + n[2]);
 
@@ -61,12 +58,12 @@ int main(int argc, char *argv[]){
     /* Cells that were filled during current timestep */
     int **emptiedCells = (int **) malloc((size_t)(n[0] * n[1] * n[2] * sizeof( int * )));
 
-    for (i = 0; i < (n[0] * n[1] * n[2]); ++i){
+    for (int i = 0; i < (n[0] * n[1] * n[2]); ++i){
         filledCells[i] = (int *) malloc((size_t)( 3 * sizeof( int )));
         emptiedCells[i] = (int *) malloc((size_t)( 3 * sizeof( int )));
     }
 
-    float viscosity = C_S * C_S * (tau - 0.5);
+    float viscosity = C_S * C_S * (config.tau - 0.5);
     float Re = 1 / viscosity;
 
     if (collideField == NULL || streamField == NULL || flagField == NULL ||
@@ -77,12 +74,12 @@ int main(int argc, char *argv[]){
 
     initialiseFields(collideField, streamField, flagField,
                      massField, fractionField,
-                     length, boundaries, r, argv, & num_fluid_cells);
+                     config.length, config.boundaries, config.r, argv, & num_fluid_cells);
 
     #ifdef DEBUG
     boundaryTime -= std::chrono::steady_clock::now ();
     #endif
-    treatBoundary(collideField, flagField, problem, &Re, &ro_ref, &ro_in, velocity, length, n_threads);
+    treatBoundary(collideField, flagField, problem, &Re, &config.ro_ref, &config.ro_in, config.velocity, config.length, config.n_threads);
     #ifdef DEBUG
     boundaryTime += std::chrono::steady_clock::now ();
     #endif
@@ -90,13 +87,13 @@ int main(int argc, char *argv[]){
     // Start the timer for the lattice updates.
     auto start_time = std::chrono::steady_clock::now();
 
-    for (t = 0; t < timesteps; t++) {
+    for (int t = 0; t < config.timesteps; t++) {
 
         /* Streaming step */
         #ifdef DEBUG
         streamingTime -= std::chrono::steady_clock::now ();
         #endif
-        doStreaming(collideField, streamField, flagField, massField, fractionField, length, n_threads, exchange);
+        doStreaming(collideField, streamField, flagField, massField, fractionField, config.length, config.n_threads, config.exchange);
         #ifdef DEBUG
         streamingTime += std::chrono::steady_clock::now ();
         #endif
@@ -109,7 +106,7 @@ int main(int argc, char *argv[]){
         #ifdef DEBUG
         collisionTime -= std::chrono::steady_clock::now ();
         #endif
-        doCollision(collideField, flagField, massField, fractionField, &tau, length, extForces, n_threads);
+        doCollision(collideField, flagField, massField, fractionField, &config.tau, config.length, config.extForces, config.n_threads);
         #ifdef DEBUG
         collisionTime += std::chrono::steady_clock::now ();
         #endif
@@ -118,7 +115,7 @@ int main(int argc, char *argv[]){
         #ifdef DEBUG
         flagTime -= std::chrono::steady_clock::now ();
         #endif
-        updateFlagField(collideField, flagField, fractionField, filledCells, emptiedCells, length, n_threads);
+        updateFlagField(collideField, flagField, fractionField, filledCells, emptiedCells, config.length, config.n_threads);
         #ifdef DEBUG
         flagTime += std::chrono::steady_clock::now ();
         #endif
@@ -127,17 +124,17 @@ int main(int argc, char *argv[]){
         #ifdef DEBUG
         boundaryTime -= std::chrono::steady_clock::now ();
         #endif
-        treatBoundary(collideField, flagField, problem, &Re, &ro_ref, &ro_in, velocity, length, n_threads);
+        treatBoundary(collideField, flagField, problem, &Re, &config.ro_ref, &config.ro_in, config.velocity, config.length, config.n_threads);
         #ifdef DEBUG
         boundaryTime += std::chrono::steady_clock::now ();
         #endif
 
-        if (t % timestepsPerPlotting == 0) {
+        if (t % config.timestepsPerPlotting == 0) {
             total_time += std::chrono::steady_clock::now () - start_time ; // Add elapsed ticks to total_time
             #ifdef DEBUG
-                run_checks(collideField, massField, flagField, length, t );
+                run_checks(collideField, massField, flagField, config.length, t );
             #endif
-            writeVtkOutput(collideField, flagField, argv[1], t, length);
+            writeVtkOutput(collideField, flagField, argv[1], t, config.length);
             printf("Time step %i finished, vtk file was created\n", t);
             start_time = std::chrono::steady_clock::now ();  // Start the timer for the lattice updates
         }
@@ -145,7 +142,7 @@ int main(int argc, char *argv[]){
 
     /* Compute average mega-lattice-updates-per-second in order to judge performance */
     elapsed_time = total_time;
-    mlups = num_fluid_cells * timesteps / (elapsed_time.count () * 1000000);
+    mlups = num_fluid_cells * config.timesteps / (elapsed_time.count () * 1000000);
     printf("Average MLUPS = %f\nElapsed time (excluding vtk writes) = %10.2f\n", mlups, elapsed_time);
 
     #ifdef DEBUG
@@ -157,7 +154,7 @@ int main(int argc, char *argv[]){
 
     /* Free allocated memory */
 
-    for (i = 0; i < (n[0] * n[1] * n[2]); ++i){
+    for (int i = 0; i < (n[0] * n[1] * n[2]); ++i){
         free(filledCells[i]);
         free(emptiedCells[i]);
     }

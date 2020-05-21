@@ -1,69 +1,56 @@
 #include "helper.h"
 #include "initLB.h"
 #include "LBDefinitions.h"
+
 #include <regex.h>
 
 /**
  * Reads the parameters for the lid driven cavity scenario from a config file.
  * Throws an error if number of program arguments does not equal 2.
  **/
-int readParameters(
-    int *length,                       /* reads domain size. Parameter name: "xlength" */
-    float *tau,                        /* relaxation parameter tau. Parameter name: "tau" */
-    float *velocity,                   /* velocity of the lid. Parameter name: "characteristicvelocity" */
-    float *extForces,                  /* External force, like gravity or electromagnetic */
-    int *timesteps,                    /* number of timesteps. Parameter name: "timesteps" */
-    int *timestepsPerPlotting,         /* timesteps between subsequent VTK plots. Parameter name: "vtkoutput" */
-    int argc,                          /* number of arguments. Should equal 2 (program + name of config file */
-    char *argv[],                      /* argv[1] shall contain the path to the config file */
-    char *problem,                     /* specifies the considered problem scenario (parabolic or constant inflow )*/
-    float *ro_ref,                     /* reference density nomally set to 1 */
-    float *ro_in,                      /* density of inflow/outflow */
-    int *boundaries,                   /* definition of the type of boundaries on each one of the walls, for definitions see LBDefinitios.h*/
-    int * r,                           /* radius of a droplet */ 
-    int * n_threads,                   /* number of threads */
-    float * exchange                   /* factor for mass exchange */
-    ){
+int readParameters(Config &config, int argc, char *argv[])
+{
 
     if (argc != 3) {
         printf("Usage: %s filename #threads\n",argv[0] );
         ERROR("number of arguments is incorrect");
     }
-    *n_threads = atoi(argv[2]); 
+    config.n_threads = atoi(argv[2]);
     char path[80] = "examples/";
-    
+
     strcat(path,argv[1]);
     const char *szFileName = strcat(path,".dat"); /* Concatenate .dat so the imput is independent of extesion*/
 
-    read_int(szFileName, "zlength", &length[2]);
-    read_int(szFileName, "ylength", &length[1]);
-    read_int(szFileName, "xlength", &length[0]);
-    read_int(szFileName, "radius", r);
-    read_float(szFileName,"tau", tau);
-    read_float(szFileName,"exchange_factor", exchange);
-    
-    read_float(szFileName, "velocity_x", &velocity[0]);
-    read_float(szFileName, "velocity_y", &velocity[1]);
-    read_float(szFileName, "velocity_z", &velocity[2]);
-    
-    read_float(szFileName, "forces_x", &extForces[0]);
-    read_float(szFileName, "forces_y", &extForces[1]);
-    read_float(szFileName, "forces_z", &extForces[2]);
-    
-    read_int(szFileName, "timesteps", timesteps);
-    read_int(szFileName, "vtkoutput", timestepsPerPlotting);
-    read_string(szFileName, "problem", problem);
-    read_float(szFileName,"ro_ref", ro_ref);
-    read_float(szFileName,"ro_in", ro_in);
+    read_int(szFileName, "zlength", &(config.length[2]));
+    read_int(szFileName, "ylength", &(config.length[1]));
+    read_int(szFileName, "xlength", &(config.length[0]));
+    read_int(szFileName, "radius", &config.r);
+    read_float(szFileName,"tau", &config.tau);
+    read_float(szFileName,"exchange_factor", &config.exchange);
 
-    read_int(szFileName, "wall_x0", &boundaries[0]);
-    read_int(szFileName, "wall_xmax", &boundaries[1]);
-    read_int(szFileName, "wall_y0", &boundaries[2]);
-    read_int(szFileName, "wall_ymax", &boundaries[3]);
-    read_int(szFileName, "wall_z0", &boundaries[4]);
-    read_int(szFileName, "wall_zmax", &boundaries[5]);
+    read_float(szFileName, "velocity_x", &(config.velocity[0]));
+    read_float(szFileName, "velocity_y", &(config.velocity[1]));
+    read_float(szFileName, "velocity_z", &(config.velocity[2]));
 
-    if (strcmp(problem, PARABOLIC_SCENARIO) != 0 && strcmp(problem, CONSTANT_SCENARIO) != 0) {
+    read_float(szFileName, "forces_x", &(config.extForces[0]));
+    read_float(szFileName, "forces_y", &(config.extForces[1]));
+    read_float(szFileName, "forces_z", &(config.extForces[2]));
+
+    read_int(szFileName, "timesteps", &config.timesteps);
+    read_int(szFileName, "vtkoutput", &config.timestepsPerPlotting);
+    read_string(szFileName, "problem", config.problem);
+    read_float(szFileName,"ro_ref", &config.ro_ref);
+    read_float(szFileName,"ro_in", &config.ro_in);
+
+    read_int(szFileName, "wall_x0", &(config.boundaries[0]));
+    read_int(szFileName, "wall_xmax", &(config.boundaries[1]));
+    read_int(szFileName, "wall_y0", &(config.boundaries[2]));
+    read_int(szFileName, "wall_ymax", &(config.boundaries[3]));
+    read_int(szFileName, "wall_z0", &(config.boundaries[4]));
+    read_int(szFileName, "wall_zmax", &(config.boundaries[5]));
+
+    if (strcmp (config.problem, PARABOLIC_SCENARIO) != 0
+        && strcmp (config.problem, CONSTANT_SCENARIO) != 0) {
         ERROR("Unrecognized scenario");
     }
 
@@ -334,7 +321,7 @@ void initialiseFields(float *collideField, float *streamField, int *flagField, f
     if ( ! reti) {
         initDropletFlags(flagField, n, r);
     }
-    
+
     initMartiniFlags(flagField, n, r);
 
     /* Set initial mass and fraction for INTERFACE cells */
