@@ -1,6 +1,8 @@
 #ifndef _FLAG_H_
 #define _FLAG_H_
 
-void updateFlagField(float * collideField, int * flagField, float * fractionField, int ** filledCells, int ** emptiedCells, int * length, int n_threads);
+#include "utils.h"
+#include <vector>
+void updateFlagField(Fields &fields, std::vector<Cell> &filledCells, std::vector<Cell> &emptiedCells, int * length, int n_threads);
 
 #endif

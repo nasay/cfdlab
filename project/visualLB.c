@@ -6,21 +6,20 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <vector>
 
 
 void write_vtkFile(const char *szProblem,
                    int t,
                    int * length,
-                   float * collideField,
-                   int * flagField) {
-  
+                   Fields &fields) {
     struct stat s;
     int x, y, z, node[3];
     char szFileName[80];
     char path[80] = "vtk-output";
     FILE *fp=NULL;
     int n[3] = { length[0] + 2,length[1] + 2,length[2] + 2 };
-    float density, *el, velocity[3];
+    float density, velocity[3];
     int is_small = ((length[0] <=100)&&(length[1] <=100)&&(length[2] <=100));
 
     if (stat(path, &s) == -1) {
@@ -53,8 +52,8 @@ void write_vtkFile(const char *szProblem,
                 node[1] = y;
                 for(x = 1; x <= length[0]; x++) {
                     node[0] = x;
-                    if (*getFlag(flagField, node, n) != OBSTACLE) {
-                        el = getEl(collideField, node, 0, n);
+                    if (*getFlag(fields, node, n) != OBSTACLE) {
+                        auto el = getEl(fields.collide, node, 0, n);
                         computeDensity(el, &density);
                         computeVelocity(el, &density, velocity);
                         fprintf(fp, "%f %f %f\n", velocity[0], velocity[1], velocity[2]);
@@ -75,8 +74,8 @@ void write_vtkFile(const char *szProblem,
                 node[1] = y;
                 for(x = 1; x <= length[0]; x++) {
                     node[0] = x;
-                    if (*getFlag(flagField, node, n) != OBSTACLE) {
-                        computeDensity(getEl(collideField, node, 0, n), &density);
+                    if (*getFlag (fields, node, n) != OBSTACLE) {
+                        computeDensity (getEl (fields.collide, node, 0, n), &density);
                         fprintf(fp, "%f\n", density);
                     } else {
                         fprintf(fp, "%f\n", 1.0);
@@ -96,7 +95,7 @@ void write_vtkFile(const char *szProblem,
             node[1] = y;
             for(x = 1; x <= length[0]; x++) {
                 node[0] = x;
-                fprintf(fp, "%d\n", *getFlag(flagField, node, n));
+                fprintf(fp, "%d\n", *getFlag (fields, node, n));
             }
         }
     }
@@ -144,10 +143,9 @@ void write_vtkPointCoordinates(FILE *fp, int * length) {
     }
 }
 
-void writeVtkOutput(float * collideField,
-                    int * flagField,
+void writeVtkOutput(Fields &fields,
                     const char * filename,
                     unsigned int t,
                     int * length) {
-    write_vtkFile(filename, t, length, collideField, flagField);
+  write_vtkFile(filename, t, length, fields);
 }

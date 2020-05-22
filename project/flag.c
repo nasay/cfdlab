@@ -1,9 +1,12 @@
 #include "LBDefinitions.h"
 #include "helper.h"
 #include "flag.h"
+#include "utils.h"
 #include "computeCellValues.h"
 
-void makeAvgDistFn(float * collideField, int * flagField, int * n, int * cell) {
+#include <vector>
+
+void makeAvgDistFn(Fields &fields, int * n, int * cell) {
     /*
     A GAS cell that is promoted to INTERFACE needs an initial distribution function, which 
     is calculated via f_eq(rho_avg, v_avg), 
@@ -12,12 +15,12 @@ void makeAvgDistFn(float * collideField, int * flagField, int * n, int * cell) {
     collideField  An array of DFs for each cell in the domain, excluding boundary cells
     n             The dimensions of the domain, including boundary cells
     cell          The coordinates of the cell in need of a DF
-    */    
+    */
 
     int i, neighbor[3], nNeighbors, flag;
-    float density, density_avg, velocity[D], velocity_avg[D], * cellDF, * neighborDF, nNeighbors_inv;
+    float density, density_avg, velocity[D], velocity_avg[D], nNeighbors_inv;
 
-    cellDF = getEl(collideField, cell, 0, n);
+    auto cellDF = getEl(fields.collide, cell, 0, n);
 
     nNeighbors = 0;
     density_avg = 0;
@@ -39,14 +42,14 @@ void makeAvgDistFn(float * collideField, int * flagField, int * n, int * cell) {
             continue;
         }
 
-        flag = *getFlag(flagField, neighbor, n);
+        flag = *getFlag(fields, neighbor, n);
 
         if (flag != FLUID && flag != INTERFACE) {
             continue;
         }
 
         // Retrieve distribution function of that neighbor
-        neighborDF = getEl(collideField, neighbor, 0, n);
+        auto neighborDF = getEl(fields.collide, neighbor, 0, n);
 
         // Extract density, velocity from that neighbor
         computeDensity(neighborDF, &density);
@@ -66,31 +69,35 @@ void makeAvgDistFn(float * collideField, int * flagField, int * n, int * cell) {
     velocity_avg[1] *= nNeighbors_inv;
     velocity_avg[2] *= nNeighbors_inv;
 
+    float feq[Q];
     /* Set cell DF as f_eq with average velocity */ 
-    computeFeq(&density_avg, velocity_avg, cellDF);
+    computeFeq(&density_avg, velocity_avg, feq);
+
+    for (i = 0; i < Q; i++)
+      *(cellDF + i) = feq[i];
 }
 
 
 /**
    Remove cell from emptied cell list
  */
-void removeFromEmptyList(int ** emptiedCells, int * nEmptied, int * targetCell) {
+void removeFromEmptyList(std::vector<Cell> &emptiedCells, int *nEmptied, int *targetCell) {
     int j = 0;
     while (j < *nEmptied && !(
-        emptiedCells[j][0] == targetCell[0] &&
-        emptiedCells[j][1] == targetCell[1] &&
-        emptiedCells[j][2] == targetCell[2])) {
+        emptiedCells[j].x == targetCell[0] &&
+        emptiedCells[j].y == targetCell[1] &&
+        emptiedCells[j].z == targetCell[2])) {
         j++;
     }
 
     // Mark element as deleted (since coordinates should be non-negative)
-    emptiedCells[j][0] = -1;
-    emptiedCells[j][0] = -1;
-    emptiedCells[j][0] = -1;
+    emptiedCells[j].x = -1;
+    emptiedCells[j].y = -1;
+    emptiedCells[j].z = -1;
 }
 
 
-void performFill(float * collideField, int * flagField, int * n, int ** filledCells, int nFilled, int ** emptiedCells, int * nEmptied, int n_threads) {
+void performFill(Fields &fields, int * n, std::vector<Cell> filledCells, int nFilled,  std::vector<Cell> emptiedCells, int * nEmptied, int n_threads) {
     /*
     For collections of interface cells that get emptied or filled, examine the neighboring cells 
     and update their flags to maintain the integrity of the interface layer. For example, if a cell 
@@ -105,22 +112,22 @@ void performFill(float * collideField, int * flagField, int * n, int ** filledCe
     nEmptied      The length of emptiedCells
     */
 
-    int i, k, neighbor[3], *flag;
+    int i, k, neighbor[3];
 
     // for each k <- cell that has been updated
 #pragma omp parallel for schedule(dynamic) private(i, neighbor, flag) num_threads(n_threads)
-    for (k = 0; k < nFilled; k++) {         
+    for (k = 0; k < nFilled; k++) {
 
         // Update the cell's own flag
-        *getFlag(flagField, filledCells[k], n) = FLUID;
+        *getFlag(fields, filledCells[k], n) = FLUID;
 
         // Update each neighbor to ensure mesh integrity
         for (i = 0; i < Q; i++) {            // for each i <- lattice direction
 
             // Retrieve coordinates of neighbor in direction i
-            neighbor[0] = filledCells[k][0] + LATTICEVELOCITIES[i][0];
-            neighbor[1] = filledCells[k][1] + LATTICEVELOCITIES[i][1];
-            neighbor[2] = filledCells[k][2] + LATTICEVELOCITIES[i][2];
+            neighbor[0] = filledCells[k].x + LATTICEVELOCITIES[i][0];
+            neighbor[1] = filledCells[k].y + LATTICEVELOCITIES[i][1];
+            neighbor[2] = filledCells[k].z + LATTICEVELOCITIES[i][2];
 
 
             // Check if neighbor is on the domain boundary, in which case we ignore it
@@ -133,7 +140,7 @@ void performFill(float * collideField, int * flagField, int * n, int ** filledCe
             }
 
             // Retrieve the flag corresponding to neighbor
-            flag = getFlag(flagField, neighbor, n);
+            auto flag = getFlag(fields, neighbor, n);
 
             // If neighbor needs to be updated
             if (*flag == GAS) {
@@ -141,7 +148,7 @@ void performFill(float * collideField, int * flagField, int * n, int ** filledCe
                 *flag = INTERFACE;
 
                 // update distribution function from average of neighbors
-                makeAvgDistFn(collideField, flagField, n, neighbor);
+                makeAvgDistFn(fields, n, neighbor);
 
                 // Remove this neighbor from 'empty' list
                 removeFromEmptyList(emptiedCells, nEmptied, neighbor);
@@ -150,7 +157,7 @@ void performFill(float * collideField, int * flagField, int * n, int ** filledCe
     }
 }
 
-void performEmpty(float * collideField, int * flagField, int * n, int ** updatedCells, int nUpdated, int n_threads) {
+void performEmpty(Fields &fields, int * n, std::vector<Cell> &updatedCells, int nUpdated, int n_threads) {
     /*
     For collections of interface cells that get emptied or filled, examine the neighboring cells 
     and update their flags to maintain the integrity of the interface layer. For example, if a cell 
@@ -163,22 +170,22 @@ void performEmpty(float * collideField, int * flagField, int * n, int ** updated
     nUpdated      The length of updatedCells
     */
 
-    int i, k, neighbor[3], * flag;
+    int i, k, neighbor[3];
 
 #pragma omp parallel for schedule(dynamic) private(i, neighbor, flag) num_threads(n_threads)
     // for each k <- cell that has been updated
-    for (k = 0; k < nUpdated; k++) {         
-        if (updatedCells[k][0] == -1) continue;
-        
-        * getFlag(flagField, updatedCells[k], n) = GAS;
+    for (k = 0; k < nUpdated; k++) {
+        if (updatedCells[k].x == -1) continue;
+
+        *getFlag(fields, updatedCells[k], n) = GAS;
 
         // Heal interface by updating neighbors
         for (i = 0; i < Q; i++) {            // for each i <- lattice direction
 
             // Retrieve coordinates of neighbor in direction i
-            neighbor[0] = updatedCells[k][0] + LATTICEVELOCITIES[i][0];
-            neighbor[1] = updatedCells[k][1] + LATTICEVELOCITIES[i][1];
-            neighbor[2] = updatedCells[k][2] + LATTICEVELOCITIES[i][2];
+            neighbor[0] = updatedCells[k].x + LATTICEVELOCITIES[i][0];
+            neighbor[1] = updatedCells[k].y + LATTICEVELOCITIES[i][1];
+            neighbor[2] = updatedCells[k].z + LATTICEVELOCITIES[i][2];
 
             // Check if neighbor is on the domain boundary, in which case we ignore it
             // TODO: See if this actually makes things faster, if not, delete it. 
@@ -190,7 +197,7 @@ void performEmpty(float * collideField, int * flagField, int * n, int ** updated
             }
 
             // Retrieve the flag corresponding to neighbor
-            flag = getFlag(flagField, neighbor, n);
+            auto flag = getFlag(fields, neighbor, n);
 
             // Swap out flag
             if (*flag == FLUID) {
@@ -200,12 +207,12 @@ void performEmpty(float * collideField, int * flagField, int * n, int ** updated
     }
 }
 
-void updateFlagField(float * collideField, int * flagField, float * fractionField, int ** filledCells, int ** emptiedCells, int * length, int n_threads) {
+void updateFlagField(Fields &fields, std::vector<Cell> &filledCells, std::vector<Cell> &emptiedCells, int * length, int n_threads) {
     int x, y, z, flag, nFilled = 0, nEmptied = 0;
     int node[3];
     float fraction, eps = 1e-3;
     int n[3] = { length[0] + 2, length[1] + 2, length[2] + 2 };
-    
+
     /*
       Updating flags for INTERFACE cells:
          if fraction > 1 set flag to FLUID;
@@ -218,22 +225,22 @@ void updateFlagField(float * collideField, int * flagField, float * fractionFiel
             node[1] = y;
             for (x = 1; x <= length[0]; x++) {
                 node[0] = x;
-                flag = *getFlag(flagField, node, n);
+                flag = *getFlag(fields, node, n);
 
                 /* We are interested only in INTERFACE cells now */
                 if (flag == INTERFACE) {
-                    fraction = *getFraction(fractionField, node, n);
+                    fraction = *getFraction(fields, node, n);
 
                     if (fraction > 1 + eps) {
-                        filledCells[nFilled][0] = node[0];
-                        filledCells[nFilled][1] = node[1];
-                        filledCells[nFilled][2] = node[2];
+                        filledCells[nFilled].x = node[0];
+                        filledCells[nFilled].y = node[1];
+                        filledCells[nFilled].z = node[2];
                         nFilled++;
 
                     } else if (fraction < -eps) {
-                        emptiedCells[nEmptied][0] = node[0];
-                        emptiedCells[nEmptied][1] = node[1];
-                        emptiedCells[nEmptied][2] = node[2];
+                        emptiedCells[nEmptied].x = node[0];
+                        emptiedCells[nEmptied].y = node[1];
+                        emptiedCells[nEmptied].z = node[2];
                         nEmptied++;
                     }
                 }
@@ -242,7 +249,7 @@ void updateFlagField(float * collideField, int * flagField, float * fractionFiel
     }
 
     // Update neighbors of filled and emptied cells in order to have closed interface layer
-    performFill(collideField, flagField, n, filledCells, nFilled, emptiedCells, &nEmptied, n_threads);
-    performEmpty(collideField, flagField, n, emptiedCells, nEmptied, n_threads);
+    performFill(fields, n, filledCells, nFilled, emptiedCells, &nEmptied, n_threads);
+    performEmpty(fields, n, emptiedCells, nEmptied, n_threads);
 }
 

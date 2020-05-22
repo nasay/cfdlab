@@ -10,6 +10,7 @@
 #include <float.h>
 #include <time.h>
 #include "LBDefinitions.h"
+#include "utils.h"
 
 #ifdef PI
 #undef PI
@@ -20,30 +21,33 @@
 /**
  * Return pointer to i-th lattice in (x, y, z) cell
  */
-__attribute__((always_inline))static inline float * getEl(float * array, int * node, int i, int *n) {
-    return array + Q * (node[2] * n[0] * n[1] + node[1] * n[0] + node[0]) + i;
+__attribute__((always_inline))static inline std::vector<float>::iterator getEl(std::vector<float> &array, int * node, int i, int *n) {
+  return array.begin () + Q * (node[2] * n[0] * n[1] + node[1] * n[0] + node[0]) + i;
 }
 
 /**
  * Return pointer to a flag of (x,y,z) element
  */
-__attribute__((always_inline))static inline int * getFlag(int * array, int * node, int *n) {
-    return array + node[2] * n[0] * n[1] + node[1] * n[0] + node[0];
+__attribute__((always_inline))static inline std::vector<int>::iterator getFlag(Fields &fields, int * node, int *n) {
+  return fields.flag.begin () + node[2] * n[0] * n[1] + node[1] * n[0] + node[0];
 }
 
+__attribute__((always_inline))static inline std::vector<int>::iterator getFlag(Fields &fields, Cell &cell, int *n) {
+  return fields.flag.begin () + cell.z * n[0] * n[1] + cell.y * n[0] + cell.x;
+}
 /**
  * Return pointer to a mass of (x,y,z) element
  */
-static inline float * getMass(float * array, int * node, int *n) {
-    return array + node[2] * n[0] * n[1] + node[1] * n[0] + node[0];
+static inline std::vector<float>::iterator getMass(Fields &fields, int * node, int *n) {
+  return fields.mass.begin () + node[2] * n[0] * n[1] + node[1] * n[0] + node[0];
 }
 
 /**
  * Return pointer to a mass of (x,y,z) element
  */
 /* TODO think about common function name for getMass and getFraction */
-static inline float * getFraction(float * array, int * node, int *n) {
-    return array + node[2] * n[0] * n[1] + node[1] * n[0] + node[0];
+static inline  std::vector<float>::iterator getFraction(Fields &fields, int * node, int *n) {
+  return fields.fraction.begin () + node[2] * n[0] * n[1] + node[1] * n[0] + node[0];
 }
 /**
  * Maximum length of input lines

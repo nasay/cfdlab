@@ -1,5 +1,8 @@
 #pragma once
 
+#include "LBDefinitions.h"
+#include <vector>
+
 struct Cell {
   int x;
   int y;
@@ -26,4 +29,27 @@ struct Config {
   float ro_ref;
 };
 
+struct Fields {
+  /* Collide field */
+  std::vector<float> collide;
 
+  /* Streaming field */
+  std::vector<float> stream;
+
+  /* Flag field */
+  std::vector<int> flag;
+
+  /* Mass field */
+  std::vector<float> mass;
+
+  /* fluid fraction field */
+  std::vector<float> fraction;
+
+  Fields (int n[3]) {
+    collide.resize (Q * n[0] * n[1] * n[2]);
+    stream.resize (Q * n[0] * n[1] * n[2]);
+    flag.resize (n[0] * n[1] * n[2]);
+    mass.resize (n[0] * n[1] * n[2]);
+    fraction.resize (n[0] * n[1] * n[2]);
+  }
+};

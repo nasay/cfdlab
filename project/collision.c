@@ -1,4 +1,5 @@
 #include "helper.h"
+#include "utils.h"
 #include "collision.h"
 
 /* Dotprod function, calcuales the dot product of two vectors */
@@ -20,21 +21,20 @@ float computeExternal (int i, float density, float * extForces){
 /** computes the post-collision distribution functions according to the BGK update rule and
  *  stores the results again at the same position.
  */
-void computePostCollisionDistributions(int *node, float * currentCell, int* flagField, float* fractionField, const float * const tau_inv, const float *const feq, const float *const feqAtm, float density, float * extForces, int * n){
+void computePostCollisionDistributions(int *node, std::vector<float>::iterator currentCell, Fields &fields, const float * const tau_inv, const float *const feq, const float *const feqAtm, float density, float * extForces, int * n){
     int i;
     float fi;
 
     for (i=0; i<Q; i++) {
-        fi = currentCell[i];
-        currentCell[i] = fi - (fi - feq[i]) * (*tau_inv) + computeExternal(i, density, extForces);
+      fi = *(currentCell + i);
+      *(currentCell + i) = fi - (fi - feq[i]) * (*tau_inv) + computeExternal(i, density, extForces);
     }
 }
 
-void doCollision(float *collideField, int *flagField, float * massField, float * fractionField, const float * const tau, int * length, float * extForces, int n_threads){
+void doCollision(Fields &fields, const float * const tau, int * length, float * extForces, int n_threads){
     float density, densityAtm =1;
     float velocity[D];
     float feq[Q], feqAtm[Q];
-    float * currentCell;
     int x, y, z, node[3], flag, isFluid;
     int n[3] = { length[0] + 2, length[1] + 2, length[2] + 2 };
     const float tau_inv = 1 / *tau;
@@ -47,25 +47,25 @@ void doCollision(float *collideField, int *flagField, float * massField, float *
             node[1] = y;
             for (x = 1; x <= length[0]; x++) {
                 node[0] = x;
-                flag = *getFlag(flagField, node, n);
+                flag = *getFlag (fields, node, n);
                 isFluid = flag == FLUID;
                 /* Perform the colision step just for fluid or interface cells */
                 if (isFluid || flag == INTERFACE) {
                     /* Calculate the density velocity, and equilibrium distributions 
                     *  for the density calculated an the atmosferic density 
                     *  with all that data calculate the postcollision distributions for the cell*/
-                    currentCell = getEl(collideField, node, 0, n);
+                    auto currentCell = getEl(fields.collide, node, 0, n);
                     computeDensity(currentCell, &density);
                     computeVelocity(currentCell, &density, velocity);
                     computeFeq(&density, velocity, feq);
                     computeFeq(&densityAtm, velocity, feqAtm);
-                    computePostCollisionDistributions(node, currentCell, flagField, fractionField, &tau_inv, feq, feqAtm, density, extForces, n);
+                    computePostCollisionDistributions(node, currentCell, fields, &tau_inv, feq, feqAtm, density, extForces, n);
                     /* Update fluid fraction */
                     if (isFluid) {
-                        *getMass(massField, node, n) = density;
-                        *getFraction(fractionField, node, n) = 1; 
+                        *getMass (fields, node, n) = density;
+                        *getFraction (fields, node, n) = 1; 
                     } else {
-                        *getFraction(fractionField, node, n) = *getMass(massField, node, n) / density;
+                        *getFraction (fields, node, n) = *getMass (fields, node, n) / density;
                     }
                 }
             }

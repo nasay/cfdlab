@@ -2,7 +2,7 @@
 #include "computeCellValues.h"
 #include <stdio.h>
 
-void computeDensity(const float *const currentCell, float *density){
+void computeDensity(std::vector<float>::iterator currentCell, float *density){
     /*
      * Computes the macroscopic density within currentCell
      * rho(x,t) = sum(f_i, i=0:Q-1)
@@ -12,11 +12,11 @@ void computeDensity(const float *const currentCell, float *density){
 
     *density = 0;
     for (i=0; i<Q; i++) {
-        *density += currentCell[i];
+      *density += (*(currentCell + i));
     }
 }
 
-void computeVelocity(const float * const currentCell, const float * const density, float *velocity){
+void computeVelocity(std::vector<float>::iterator currentCell, const float * const density, float *velocity){
     /*
      * Computes the velocity within currentCell 
      * u(x,t) = sum(f[i] * c[i] for i in [0:Q-1]) / rho
@@ -28,13 +28,13 @@ void computeVelocity(const float * const currentCell, const float * const densit
     velocity[0] = 0;
     velocity[1] = 0;
     velocity[2] = 0;
-    
+
     for (i=0; i<Q; i++) {
-        velocity[0] += LATTICEVELOCITIES[i][0] * currentCell[i];
-        velocity[1] += LATTICEVELOCITIES[i][1] * currentCell[i];
-        velocity[2] += LATTICEVELOCITIES[i][2] * currentCell[i];
+      velocity[0] += LATTICEVELOCITIES[i][0] * (*(currentCell + i));
+      velocity[1] += LATTICEVELOCITIES[i][1] * (*(currentCell + i));
+      velocity[2] += LATTICEVELOCITIES[i][2] * (*(currentCell + i));
     }
-    
+
     velocity[0] *= density_inv;
     velocity[1] *= density_inv;
     velocity[2] *= density_inv;

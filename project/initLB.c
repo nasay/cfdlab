@@ -60,14 +60,14 @@ int readParameters(Config &config, int argc, char *argv[])
 /**
    Initialize cell flag and fluid distributions
  */
-void initialiseCell(float *collideField, float *streamField, int *flagField, int *n, int * node, int flag) {	
+void initialiseCell(Fields &fields, int *n, int * node, int flag) {	
     int i;
 
-    *getFlag(flagField, node, n) = flag;    /*asigns the flag to the specified cell */
+    *getFlag (fields, node, n) = flag;    /*asigns the flag to the specified cell */
 
     for (i = 0; i < Q; ++i){
-        *getEl(streamField, node, i, n) = LATTICEWEIGHTS[i];    /*Insert on each cell the initial value */
-        *getEl(collideField, node, i, n) = LATTICEWEIGHTS[i];
+        *getEl(fields.stream, node, i, n) = LATTICEWEIGHTS[i];    /*Insert on each cell the initial value */
+        *getEl(fields.collide, node, i, n) = LATTICEWEIGHTS[i];
     }
 }
 
@@ -76,13 +76,12 @@ void initialiseCell(float *collideField, float *streamField, int *flagField, int
   For INTERFACE cells sets initial mass to sum of the distributions from the neighboring FLUID cells.
   Set fraction to be equal to the mass, since our initial density is equal to 1.
  */
-void initializeCellMass(float * collideField, int * flagField, float *massField, float * fractionField, int * node, int * n) {
-    int neighbor_node[3], i, flag;
-    float * mass;
+void initializeCellMass(Fields &fields, int * node, int * n) {
+    int neighbor_node[3], i;
 
-    flag = *getFlag(flagField, node, n);
+    auto flag = *getFlag (fields, node, n);
     if (flag == FLUID) {
-        *getFraction(fractionField, node, n) = 1.0;
+        *getFraction (fields, node, n) = 1.0;
         return;
     }
 
@@ -90,7 +89,7 @@ void initializeCellMass(float * collideField, int * flagField, float *massField,
         return;
     }
 
-    mass = getMass(massField, node, n);
+    auto mass = getMass (fields, node, n);
     *mass = 0.0;
 
     for (i = 0; i < Q; i++) {
@@ -101,13 +100,13 @@ void initializeCellMass(float * collideField, int * flagField, float *massField,
         if (neighbor_node[0] < n[0] && neighbor_node[1] < n[1] && neighbor_node[2] < n[2] &&
             neighbor_node[0] >= 0 && neighbor_node[1] >= 0 && neighbor_node[2] >= 0) {
 
-            if (*getFlag(flagField, neighbor_node, n) == FLUID) {
-                *mass += *getEl(collideField, neighbor_node, Q - 1- i, n);
+            if (*getFlag (fields, neighbor_node, n) == FLUID) {
+                *mass += *getEl(fields.collide, neighbor_node, Q - 1- i, n);
             }
         }
     }
 
-    *getFraction(fractionField, node, n) = *mass;
+    *getFraction (fields, node, n) = *mass;
 }
 
 /**
@@ -136,7 +135,7 @@ void checkForbiddenPatterns(int ** image, int * length) {
    Add droplet to the flag field.
    Droplet center will be in (n0/2, n1/2, n2 - r - 2), where r  is droplet radius.
  */
-void initDropletFlags(int * flagField, int * n, int r) {
+void initDropletFlags(Fields &fields, int * n, int r) {
     int x0 = n[0] / 2;
     int y0 = n[1] / 2;
     int z0 = n[2] - r - 2;
@@ -153,7 +152,7 @@ void initDropletFlags(int * flagField, int * n, int r) {
                 node[0] = x;
                 /* Initialize sphere of FLUID with radius r */
                 if ((x-x0)*(x-x0) + (y-y0)*(y-y0) + (z-z0)*(z-z0) < r*r) {
-                    *getFlag(flagField, node, n) = FLUID;
+                    *getFlag(fields, node, n) = FLUID;
                     /* Check whether its neighbors are in the sphere. If not mark them as INTERFACE */
                     for (i = 0; i < Q; i++) {
                         neighbor_node[0] = node[0] + LATTICEVELOCITIES[i][0];
@@ -163,7 +162,7 @@ void initDropletFlags(int * flagField, int * n, int r) {
                         if ((neighbor_node[0]-x0)*(neighbor_node[0]-x0) +
                             (neighbor_node[1]-y0)*(neighbor_node[1]-y0) +
                             (neighbor_node[2]-z0)*(neighbor_node[2]-z0) >= r*r) {
-                            *getFlag(flagField, node, n) = INTERFACE;
+                            *getFlag (fields, node, n) = INTERFACE;
                         }
                     }
                 }
@@ -172,13 +171,13 @@ void initDropletFlags(int * flagField, int * n, int r) {
     }
 }
 
-void initMartiniFlags(int *flagField, int *n, int r) {
+void initMartiniFlags(Fields &fields, int *n, int r) {
     int node[3], neighbor_node[3], i;
 
     int x0 = n[0] / 2;
     int y0 = n[1] / 2;
     int z0 = n[2] / 2;
-    int x, y, z, sum, eps = 1, *flag;
+    int x, y, z, sum, eps = 1;
 
     for (z = z0-r; z <= z0; z++) {
         node[2] = z;
@@ -189,7 +188,7 @@ void initMartiniFlags(int *flagField, int *n, int r) {
                 sum = (x-x0)*(x-x0) + (y-y0)*(y-y0) + (z-z0)*(z-z0);
                 /* Initialize sphere of FLUID with radius r */
                 if (sum <= (r+eps)*(r+eps) && sum >= (r-eps)*(r-eps)) {
-                    *getFlag(flagField, node, n) = OBSTACLE;
+                    *getFlag(fields, node, n) = OBSTACLE;
                 }
             }
         }
@@ -202,7 +201,7 @@ void initMartiniFlags(int *flagField, int *n, int r) {
             for (x = x0 - r; x <= x0 + r; x++) {
                 node[0] = x;
 
-                if (*getFlag(flagField, node, n) != OBSTACLE) {
+                if (*getFlag (fields, node, n) != OBSTACLE) {
                     continue;
                 }
 
@@ -211,7 +210,7 @@ void initMartiniFlags(int *flagField, int *n, int r) {
                     neighbor_node[0] = node[0] + LATTICEVELOCITIES[i][0];
                     neighbor_node[1] = node[1] + LATTICEVELOCITIES[i][1];
                     neighbor_node[2] = node[2] + LATTICEVELOCITIES[i][2];
-                    flag = getFlag(flagField, neighbor_node, n);
+                    auto flag = getFlag(fields, neighbor_node, n);
 
                     if (*flag != GAS) {
                         continue;
@@ -227,7 +226,7 @@ void initMartiniFlags(int *flagField, int *n, int r) {
 /*
   Initialize flags from the image and set initial distributions for stream and collide field.
  */
-void initialiseFlagsAndDF(float * collideField, float * streamField, int * flagField, int ** image, int * length, int * n, int * walls, double * num_fluid_cells) {
+void initialiseFlagsAndDF(Fields &fields, int ** image, int * length, int * n, int * walls, double * num_fluid_cells) {
     int x, y, z, node[3];
 
    /* 
@@ -241,7 +240,7 @@ void initialiseFlagsAndDF(float * collideField, float * streamField, int * flagF
         node[1] = y;
         for (x = 0; x <= length[0] + 1; ++x) {
             node[0] = x;
-            initialiseCell(collideField, streamField, flagField, n, node, walls[4]);   /* Loop for the down wall of the cavity*/
+            initialiseCell(fields, n, node, walls[4]);   /* Loop for the down wall of the cavity*/
         }
     }
 
@@ -251,30 +250,30 @@ void initialiseFlagsAndDF(float * collideField, float * streamField, int * flagF
         node[1] = 0;
         for (x = 0; x <= length[0] + 1; ++x){
             node[0] = x;
-            initialiseCell(collideField, streamField, flagField, n, node, walls[2]);   /* Loop for the front wall of the cavity*/
+            initialiseCell(fields, n, node, walls[2]);   /* Loop for the front wall of the cavity*/
         }
 
         for (y = 1; y <= length[1]; ++y){
             node[1] = y;
             /* x = 0; */
             node[0] = 0;
-            initialiseCell(collideField, streamField, flagField, n, node, walls[0]);   /* Loop for the left wall of the cavity*/
+            initialiseCell(fields, n, node, walls[0]);   /* Loop for the left wall of the cavity*/
             for (x = 1; x <= length[0]; ++x){
                 node[0] = x;
-                initialiseCell(collideField, streamField, flagField, n, node, image[x][z]);           /* Loop for the interior points*/
+                initialiseCell(fields, n, node, image[x][z]);           /* Loop for the interior points*/
                 if (image[x][z] != GAS)
                     (*num_fluid_cells) ++;
             }
             /* x = length[0]+1; */
             node[0] = length[0] + 1;
-            initialiseCell(collideField, streamField, flagField, n, node, walls[1]);   /* Loop for the right wall of the cavity*/
+            initialiseCell(fields, n, node, walls[1]);   /* Loop for the right wall of the cavity*/
         }
 
         /* y = length[1]+1; */
         node[1] = length[1] + 1;
         for (x = 0; x <= length[0] + 1; ++x){
             node[0] = x;
-            initialiseCell(collideField, streamField, flagField, n, node, walls[3]);   /* Loop for the back wall of the cavity*/
+            initialiseCell(fields, n, node, walls[3]);   /* Loop for the back wall of the cavity*/
         }
     }
 
@@ -284,7 +283,7 @@ void initialiseFlagsAndDF(float * collideField, float * streamField, int * flagF
         node[1] = y;
         for (x = 0; x < length[0] + 2; ++x){
             node[0] = x;
-            initialiseCell(collideField, streamField, flagField, n, node, walls[5]);   /* Loop for the up wall of the cavity*/
+            initialiseCell(fields, n, node, walls[5]);   /* Loop for the up wall of the cavity*/
         }
     }
 }
@@ -293,7 +292,7 @@ void initialiseFlagsAndDF(float * collideField, float * streamField, int * flagF
   Initializes collide, stream, flag, mass and fraction fields.
   Update number of fluid cells.
  */
-void initialiseFields(float *collideField, float *streamField, int *flagField, float * massField, float * fractionField, int * length, int * boundaries, int r, char *argv[], double * num_fluid_cells){
+void initialiseFields (Fields &fields, int * length, int * boundaries, int r, char *argv[], double * num_fluid_cells){
     int x, y, z, node[3], reti;
     int ** image;
     char path[80] = "examples/";
@@ -309,7 +308,7 @@ void initialiseFields(float *collideField, float *streamField, int *flagField, f
     image = read_pgm(path);
     checkForbiddenPatterns(image, length);
 
-    initialiseFlagsAndDF(collideField, streamField, flagField, image, length, n, boundaries, num_fluid_cells);
+    initialiseFlagsAndDF(fields, image, length, n, boundaries, num_fluid_cells);
 
     reti = regcomp(&regex, "droplet", 0);
     if (reti) {
@@ -319,10 +318,10 @@ void initialiseFields(float *collideField, float *streamField, int *flagField, f
     /* Check whether it is droplet example */
     reti = regexec(&regex, argv[1], 0, NULL, 0);
     if ( ! reti) {
-        initDropletFlags(flagField, n, r);
+        initDropletFlags(fields, n, r);
     }
 
-    initMartiniFlags(flagField, n, r);
+    initMartiniFlags(fields, n, r);
 
     /* Set initial mass and fraction for INTERFACE cells */
     for (z = 1; z <= length[2]; z++) {
@@ -332,7 +331,7 @@ void initialiseFields(float *collideField, float *streamField, int *flagField, f
             for (x = 1; x <= length[0]; x++) {
                 node[0] = x;
 
-                initializeCellMass(collideField, flagField, massField, fractionField, node, n);
+                initializeCellMass (fields, node, n);
             }
         }
 

@@ -2,13 +2,13 @@
 #include "LBDefinitions.h"
 #include "helper.h"
 #include "computeCellValues.h"
+#include "utils.h"
 
 /**
  * Set NOSLIP condition
  */
-void setNoSlip(float * collideField, int * flagField, int * node, int * n) {
+void setNoSlip(Fields &fields, int * node, int * n) {
     int i, coord_dest[3], flag;
-    float * cell_ptr;
 
     /* for each lattice */
     for (i = 0; i < Q; i++) {
@@ -20,15 +20,15 @@ void setNoSlip(float * collideField, int * flagField, int * node, int * n) {
         /* does the pointed cell lay in our domain? */
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
             coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
-            flag = *getFlag(flagField, coord_dest, n);
+            flag = *getFlag (fields, coord_dest, n);
             /* if pointed cell is FLUID or INTERFACE */
             if (flag == FLUID || flag == INTERFACE) {
                 /* get pointer to the i-th lattice of boundary cell */
-                cell_ptr = getEl(collideField, node, i, n);
-    
+                auto cell_ptr = getEl(fields.collide, node, i, n);
+
                 /* NOSLIP */
                 /* set i-th lattice to inverse lattice of the computed inner cell */
-                *cell_ptr= *getEl(collideField, coord_dest, Q-1-i, n);
+                *cell_ptr= *getEl(fields.collide, coord_dest, Q-1-i, n);
             }
         }
     }
@@ -37,12 +37,11 @@ void setNoSlip(float * collideField, int * flagField, int * node, int * n) {
 /**
  * Set MOVING_WALL condition
  */
-void setMovingWall(float * collideField, int * flagField,  const float * const wallVelocity, int * node, int * n) {
+void setMovingWall(Fields &fields,  const float * const wallVelocity, int * node, int * n) {
     int i, coord_dest[3], flag;
-    float * cell_ptr;
     float dotProd;
     float density;
-    
+
 /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
@@ -54,15 +53,15 @@ void setMovingWall(float * collideField, int * flagField,  const float * const w
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
             coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0 ) {
 
-            flag = *getFlag(flagField, coord_dest, n);
+            flag = *getFlag(fields, coord_dest, n);
             /* if pointed cell is FLUID */
             if (flag == FLUID || flag == INTERFACE) {
                 /* get pointer to the i-th lattice of boundary cell */
-                cell_ptr = getEl(collideField, node, i, n);
+                auto cell_ptr = getEl(fields.collide, node, i, n);
 
                 /* NOSLIP */
                 /* set i-th lattice to inverse lattice of the computed inner cell */
-                *cell_ptr= *getEl(collideField, coord_dest, 18-i, n);
+                *cell_ptr= *getEl(fields.collide, coord_dest, 18-i, n);
 
                 dotProd = 0;
 
@@ -71,7 +70,7 @@ void setMovingWall(float * collideField, int * flagField,  const float * const w
                     dotProd += LATTICEVELOCITIES[i][j] * wallVelocity[j];
                 }
 
-                computeDensity(getEl(collideField, coord_dest, 0, n), &density);
+                computeDensity(getEl(fields.collide, coord_dest, 0, n), &density);
 
                 /* Set boundary i-th lattice with respect to the formula for MOVING_WALL */
                 *cell_ptr += 2.0 * LATTICEWEIGHTS[i] * dotProd * density / (C_S*C_S);
@@ -83,16 +82,13 @@ void setMovingWall(float * collideField, int * flagField,  const float * const w
 /**
  * Set OUTFLOW condition
  */
-void setOutflow(float * collideField,
-                int * flagField,
+void setOutflow(Fields &fields,
                 const float * const ro_ref,
                 int * node,
                 int * n) {
     int i, coord_dest[3], flag;
-    float * cell_ptr;
     float feq[Q];
     float velocity[D];
-    float * fluidCell;
 
     /* for each lattice */
     for (i = 0; i < Q; i++) {
@@ -104,11 +100,11 @@ void setOutflow(float * collideField,
         /* does the pointed cell lay in our domain? */
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
             coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0 ) {
-            flag = *getFlag(flagField, coord_dest, n);
-       
+            flag = *getFlag(fields, coord_dest, n);
+
             if (flag == FLUID || flag == INTERFACE) {
                 /* get pointer to the fluid cell */
-                fluidCell = getEl(collideField, coord_dest, 0, n);
+                auto fluidCell = getEl(fields.collide, coord_dest, 0, n);
 
                 /* compute velocity of the fluid cell */
                 computeVelocity(fluidCell, ro_ref, velocity);
@@ -117,7 +113,7 @@ void setOutflow(float * collideField,
                 computeFeq(ro_ref, velocity, feq);
 
                 /* pointer to the i-th lattice of the boundary cell */
-                cell_ptr = getEl(collideField, node, i, n);
+                auto cell_ptr = getEl(fields.collide, node, i, n);
 
                 /* set boundary */
                 *cell_ptr = feq[Q - i -1] + feq[i] - fluidCell[Q - 1 - i];
@@ -129,8 +125,7 @@ void setOutflow(float * collideField,
 /**
  * Set INFLOW condition
  */
-void setInflow(float * collideField,
-               int * flagField,
+void setInflow(Fields &fields,
                const char * const scenario,
                const float * const Re,
                const float * const ro_ref,
@@ -139,7 +134,6 @@ void setInflow(float * collideField,
                int * node,
                int * n) {
     int i, coord_dest[3], flag;
-    float * cell_ptr;
     float feq[Q];
     float velocity[3];
 
@@ -164,13 +158,13 @@ void setInflow(float * collideField,
         /* does the pointed cell lay in our domain? */
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
             coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
-            flag = *getFlag(flagField, coord_dest, n); 
-       
+            flag = *getFlag (fields, coord_dest, n); 
+
             if (flag == FLUID || flag == INTERFACE) {
-            
+
                 computeFeq(ro_ref, velocity, feq);
 
-                cell_ptr = getEl(collideField, node, i, n);
+                auto cell_ptr = getEl(fields.collide, node, i, n);
 
                 *cell_ptr = feq[i];
             }
@@ -181,20 +175,20 @@ void setInflow(float * collideField,
 /**
  * Set FREE-SLIP condition
  */
-void setFreeSlip(float * collideField, int * flagField, int * node, int * n) {
+void setFreeSlip(Fields &fields, int * node, int * n) {
     int i, j, k, coord_dest[3], non_fluid_cell[3], flag;
-    float * cell_ptr, sum, lv0, lv1, lv2;
+    float sum, lv0, lv1, lv2;
 
     for (i = 0; i < Q; i++) {
         /* Initialize the cell with a flag, that will later make possible to know if some lattice was modified*/
-        *getEl(collideField, node, i, n) = 0;
+        *getEl(fields.collide, node, i, n) = 0;
     }
 
     for (i = 0; i < Q; i++) {
         lv0 = LATTICEVELOCITIES[i][0];
         lv1 = LATTICEVELOCITIES[i][1];
         lv2 = LATTICEVELOCITIES[i][2];
-        
+
         sum = lv0 * lv0 + lv1 * lv1 + lv2 * lv2;
 
         /* In this part we are interested only in the face of the cell, thus the lattice has just one component */
@@ -205,7 +199,7 @@ void setFreeSlip(float * collideField, int * flagField, int * node, int * n) {
             /* If the pointed cell does not fall out of bounds */
             if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
                 coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
-                flag = *getFlag(flagField, coord_dest, n);
+                flag = *getFlag (fields, coord_dest, n);
                 /* if pointed cell is FLUID */
                 if (flag == FLUID || flag == INTERFACE) {
                     for (j = 0; j < Q; j++) {
@@ -213,13 +207,13 @@ void setFreeSlip(float * collideField, int * flagField, int * node, int * n) {
                         if(LATTICEVELOCITIES[i][0]*LATTICEVELOCITIES[j][0] == -1.0 ||
                            LATTICEVELOCITIES[i][1]*LATTICEVELOCITIES[j][1] == -1.0 ||
                            LATTICEVELOCITIES[i][2]*LATTICEVELOCITIES[j][2] == -1.0) {
-                            
+
                             /* If the selected direction of the fluid cell falls on another fluid cell, they will interact in the streaming step */
                             non_fluid_cell[0] = coord_dest[0] + LATTICEVELOCITIES[j][0];
                             non_fluid_cell[1] = coord_dest[1] + LATTICEVELOCITIES[j][1];
-                            non_fluid_cell[2] = coord_dest[2] + LATTICEVELOCITIES[j][0];
+                            non_fluid_cell[2] = coord_dest[2] + LATTICEVELOCITIES[j][2];
 
-                            flag = *getFlag(flagField, non_fluid_cell, n);
+                            flag = *getFlag (fields, non_fluid_cell, n);
                             if (flag != FLUID && flag != INTERFACE) {
                                 for (k = 0; k < Q; k++) {
                                     /* Search for a (unique) direction in the boundary cell which is the reflection of the fluid cell */
@@ -229,8 +223,8 @@ void setFreeSlip(float * collideField, int * flagField, int * node, int * n) {
                                        ( LATTICEVELOCITIES[k][0]*LATTICEVELOCITIES[j][0] == 1.0 ||
                                          LATTICEVELOCITIES[k][1]*LATTICEVELOCITIES[j][1] == 1.0 ||
                                          LATTICEVELOCITIES[k][2]*LATTICEVELOCITIES[j][2] == 1.0 )){
-                                        cell_ptr = getEl(collideField, node, k, n);
-                                        *cell_ptr = *getEl(collideField, coord_dest, j, n);
+                                        auto cell_ptr = getEl(fields.collide, node, k, n);
+                                        *cell_ptr = *getEl(fields.collide, coord_dest, j, n);
                                         break;
                                     }
                                 }
@@ -247,7 +241,7 @@ void setFreeSlip(float * collideField, int * flagField, int * node, int * n) {
         /*  If the lattice was not modified in the previous process, this happens for the inverse direction of the lattice going out of the face
         *   is also possible that the boundary does not share a facet with the fluid but it shares an edge or vertex.
         *   In those cases the boundary behaves as non slip, bouncing back everything*/
-        if (*getEl(collideField, node, i, n) == 0){
+        if (*getEl(fields.collide, node, i, n) == 0){
             /* compute a cell where lattice is pointing*/
             coord_dest[0] = node[0] + LATTICEVELOCITIES[i][0];
             coord_dest[1] = node[1] + LATTICEVELOCITIES[i][1];
@@ -255,23 +249,22 @@ void setFreeSlip(float * collideField, int * flagField, int * node, int * n) {
     
             if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
                 coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
-                flag = *getFlag(flagField, coord_dest, n); 
+                flag = *getFlag (fields, coord_dest, n); 
                 /* if pointed cell is FLUID */
                 if (flag == FLUID || flag == INTERFACE) {
                     /* get pointer to the i-th lattice of boundary cell */
-                    cell_ptr = getEl(collideField, node, i, n);
+                    auto cell_ptr = getEl(fields.collide, node, i, n);
         
                     /* NOSLIP */
                     /* set i-th lattice to inverse lattice of the computed inner cell */
-                    *cell_ptr= *getEl(collideField, coord_dest, Q-1-i, n);
+                    *cell_ptr= *getEl(fields.collide, coord_dest, Q-1-i, n);
                 }
             }
         }
     }
 }
 
-void boundaryCell(float * collideField,
-                  int * flagField,
+void boundaryCell(Fields &fields,
                   const char * const scenario,
                   const float * const Re,
                   const float * const ro_ref,
@@ -284,22 +277,21 @@ void boundaryCell(float * collideField,
     if (flag == GAS) {
         return;
     } else if (flag == NOSLIP) {
-        setNoSlip(collideField, flagField, node, n);
+        setNoSlip(fields, node, n);
     } else if (flag == MOVING_WALL) {
-        setMovingWall(collideField, flagField, velocity, node, n);
+        setMovingWall(fields, velocity, node, n);
     } else if (flag == INFLOW) {
-        setInflow(collideField, flagField, scenario, Re, ro_ref, ro_in, velocity, node, n);
+        setInflow(fields, scenario, Re, ro_ref, ro_in, velocity, node, n);
     } else if (flag == OUTFLOW) {
-        setOutflow(collideField, flagField, ro_ref, node, n);
+        setOutflow(fields, ro_ref, node, n);
     } else if (flag == FREESLIP) {
-        setFreeSlip(collideField, flagField, node, n);
+        setFreeSlip(fields, node, n);
     } else if (flag == PRESSURE_IN) {
-        setOutflow(collideField, flagField, ro_in, node, n);
+        setOutflow(fields, ro_in, node, n);
     }
 }
 
-void treatBoundary(float *collideField,
-                   int *flagField,
+void treatBoundary(Fields &fields,
                    const char * const scenario,
                    const float * const Re,
                    const float * const ro_ref,
@@ -318,10 +310,10 @@ void treatBoundary(float *collideField,
             node[1] = y;
             for (x = 0; x < n[0]; x++) {
                 node[0] = x;
-                flag = *getFlag(flagField, node, n);
+                flag = *getFlag (fields, node, n);
                 /* If the cell is fluid, obstacle or interface then it does not require boundary treatment */
                 if (flag != FLUID && flag != OBSTACLE && flag != INTERFACE) {
-                    boundaryCell(collideField, flagField, scenario, Re, ro_ref, ro_in, velocity, node, flag, n);
+                    boundaryCell(fields, scenario, Re, ro_ref, ro_in, velocity, node, flag, n);
                 }
             }
         }
