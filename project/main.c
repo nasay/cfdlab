@@ -54,25 +54,25 @@ int main(int argc, char *argv[]){
                      config.length, config.boundaries, config.r, argv, &num_fluid_cells);
 
     #ifdef DEBUG
-    boundaryTime -= std::chrono::steady_clock::now ();
+    auto boundaryStartTime = std::chrono::high_resolution_clock::now ();
     #endif
     treatBoundary(fields, problem, &Re, &config.ro_ref, &config.ro_in, config.velocity, config.length, config.n_threads);
     #ifdef DEBUG
-    boundaryTime += std::chrono::steady_clock::now ();
+    boundaryTime += std::chrono::duration<double> (std::chrono::high_resolution_clock::now () - boundaryStartTime);
     #endif
 
     // Start the timer for the lattice updates.
-    auto start_time = std::chrono::steady_clock::now();
+    auto start_time = std::chrono::high_resolution_clock::now();
 
     for (int t = 0; t < config.timesteps; t++) {
 
         /* Streaming step */
         #ifdef DEBUG
-        streamingTime -= std::chrono::steady_clock::now ();
+        auto streamingStartTime = std::chrono::high_resolution_clock::now ();
         #endif
         doStreaming(fields, config.length, config.n_threads, config.exchange);
         #ifdef DEBUG
-        streamingTime += std::chrono::steady_clock::now ();
+        streamingTime += std::chrono::duration<double> (std::chrono::high_resolution_clock::now () - streamingStartTime);
         #endif
 
         swap = std::move (fields.collide);
@@ -81,39 +81,39 @@ int main(int argc, char *argv[]){
 
         /* Collision step */
         #ifdef DEBUG
-        collisionTime -= std::chrono::steady_clock::now ();
+        auto collisionStartTime = std::chrono::high_resolution_clock::now ();
         #endif
         doCollision(fields, &config.tau, config.length, config.extForces, config.n_threads);
         #ifdef DEBUG
-        collisionTime += std::chrono::steady_clock::now ();
+        collisionTime += std::chrono::duration<double> (std::chrono::high_resolution_clock::now () - collisionStartTime);
         #endif
 
         /* Updating flags */
         #ifdef DEBUG
-        flagTime -= std::chrono::steady_clock::now ();
+        auto flagStartTime = std::chrono::high_resolution_clock::now ();
         #endif
         updateFlagField(fields, filledCells, emptiedCells, config.length, config.n_threads);
         #ifdef DEBUG
-        flagTime += std::chrono::steady_clock::now ();
+        flagTime +=  std::chrono::duration<double> (std::chrono::high_resolution_clock::now () - flagStartTime);
         #endif
 
         /* Updating boundaries */
         #ifdef DEBUG
-        boundaryTime -= std::chrono::steady_clock::now ();
+        boundaryStartTime = std::chrono::high_resolution_clock::now ();
         #endif
         treatBoundary(fields, problem, &Re, &config.ro_ref, &config.ro_in, config.velocity, config.length, config.n_threads);
         #ifdef DEBUG
-        boundaryTime += std::chrono::steady_clock::now ();
+        boundaryTime += std::chrono::duration<double> (std::chrono::high_resolution_clock::now () - boundaryStartTime);
         #endif
 
         if (t % config.timestepsPerPlotting == 0) {
-            total_time += std::chrono::steady_clock::now () - start_time ; // Add elapsed ticks to total_time
+          total_time += std::chrono::duration<double> (std::chrono::high_resolution_clock::now () - start_time); // Add elapsed ticks to total_time
             #ifdef DEBUG
                 run_checks(fields, config.length, t );
             #endif
             writeVtkOutput(fields, argv[1], t, config.length);
             printf("Time step %i finished, vtk file was created\n", t);
-            start_time = std::chrono::steady_clock::now ();  // Start the timer for the lattice updates
+            start_time = std::chrono::high_resolution_clock::now ();  // Start the timer for the lattice updates
         }
     }
 
