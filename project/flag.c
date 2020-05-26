@@ -32,9 +32,9 @@ void makeAvgDistFn(Fields &fields, int * n, int * cell) {
     for (i = 0; i < Q; i++) {
 
         // Retrieve coordinates of neighbor in direction i
-        neighbor[0] = cell[0] + LATTICEVELOCITIES[i][0];
-        neighbor[1] = cell[1] + LATTICEVELOCITIES[i][1];
-        neighbor[2] = cell[2] + LATTICEVELOCITIES[i][2];
+        neighbor[0] = cell[0] + LATTICEVELOCITIES[i].x;
+        neighbor[1] = cell[1] + LATTICEVELOCITIES[i].y;
+        neighbor[2] = cell[2] + LATTICEVELOCITIES[i].z;
 
         // Do not overstep boundaries
         if (neighbor[0] < 1 || neighbor[0] > n[0]-2 || neighbor[1] == 0 || 
@@ -97,7 +97,7 @@ void removeFromEmptyList(std::vector<Cell> &emptiedCells, int *nEmptied, int *ta
 }
 
 
-void performFill(Fields &fields, int * n, std::vector<Cell> filledCells, int nFilled,  std::vector<Cell> emptiedCells, int * nEmptied, int n_threads) {
+void performFill(Fields &fields, int * n, std::vector<Cell> &filledCells, int nFilled, std::vector<Cell> &emptiedCells, int * nEmptied, int n_threads) {
     /*
     For collections of interface cells that get emptied or filled, examine the neighboring cells 
     and update their flags to maintain the integrity of the interface layer. For example, if a cell 
@@ -125,9 +125,9 @@ void performFill(Fields &fields, int * n, std::vector<Cell> filledCells, int nFi
         for (i = 0; i < Q; i++) {            // for each i <- lattice direction
 
             // Retrieve coordinates of neighbor in direction i
-            neighbor[0] = filledCells[k].x + LATTICEVELOCITIES[i][0];
-            neighbor[1] = filledCells[k].y + LATTICEVELOCITIES[i][1];
-            neighbor[2] = filledCells[k].z + LATTICEVELOCITIES[i][2];
+            neighbor[0] = filledCells[k].x + LATTICEVELOCITIES[i].x;
+            neighbor[1] = filledCells[k].y + LATTICEVELOCITIES[i].y;
+            neighbor[2] = filledCells[k].z + LATTICEVELOCITIES[i].z;
 
 
             // Check if neighbor is on the domain boundary, in which case we ignore it
@@ -170,7 +170,8 @@ void performEmpty(Fields &fields, int * n, std::vector<Cell> &updatedCells, int 
     nUpdated      The length of updatedCells
     */
 
-    int i, k, neighbor[3];
+    int i, k;
+    Cell neighbor;
 
 #pragma omp parallel for schedule(dynamic) private(i, neighbor, flag) num_threads(n_threads)
     // for each k <- cell that has been updated
@@ -183,16 +184,16 @@ void performEmpty(Fields &fields, int * n, std::vector<Cell> &updatedCells, int 
         for (i = 0; i < Q; i++) {            // for each i <- lattice direction
 
             // Retrieve coordinates of neighbor in direction i
-            neighbor[0] = updatedCells[k].x + LATTICEVELOCITIES[i][0];
-            neighbor[1] = updatedCells[k].y + LATTICEVELOCITIES[i][1];
-            neighbor[2] = updatedCells[k].z + LATTICEVELOCITIES[i][2];
+            neighbor.x = updatedCells[k].x + LATTICEVELOCITIES[i].x;
+            neighbor.y = updatedCells[k].y + LATTICEVELOCITIES[i].y;
+            neighbor.z = updatedCells[k].z + LATTICEVELOCITIES[i].z;
 
             // Check if neighbor is on the domain boundary, in which case we ignore it
             // TODO: See if this actually makes things faster, if not, delete it. 
             //       Unless someone sets the FLUID flag as a domain boundary condition, 
             //       which would probably cause lots of problems, this won't do anything.
-            if (neighbor[0] == 0 || neighbor[0] == n[0] || neighbor[1] == 0 || 
-                neighbor[1] == n[1] || neighbor[2] == 0 || neighbor[2] == n[2]) {
+            if (neighbor.x == 0 || neighbor.x == n[0] || neighbor.y == 0 || 
+                neighbor.y == n[1] || neighbor.z == 0 || neighbor.z == n[2]) {
                 continue;
             }
 
@@ -209,7 +210,7 @@ void performEmpty(Fields &fields, int * n, std::vector<Cell> &updatedCells, int 
 
 void updateFlagField(Fields &fields, std::vector<Cell> &filledCells, std::vector<Cell> &emptiedCells, int * length, int n_threads) {
     int x, y, z, flag, nFilled = 0, nEmptied = 0;
-    int node[3];
+    Cell node;
     float fraction, eps = 1e-3;
     int n[3] = { length[0] + 2, length[1] + 2, length[2] + 2 };
 
@@ -220,11 +221,11 @@ void updateFlagField(Fields &fields, std::vector<Cell> &filledCells, std::vector
       Saving all emptied and filled cells to emptiedCells and filledCells arrays.
     */
     for (z = 1; z <= length[2]; z++) {
-        node[2] = z;
+        node.z = z;
         for (y = 1; y <= length[1]; y++) {
-            node[1] = y;
+            node.y = y;
             for (x = 1; x <= length[0]; x++) {
-                node[0] = x;
+                node.x = x;
                 flag = *getFlag(fields, node, n);
 
                 /* We are interested only in INTERFACE cells now */
@@ -232,16 +233,12 @@ void updateFlagField(Fields &fields, std::vector<Cell> &filledCells, std::vector
                     fraction = *getFraction(fields, node, n);
 
                     if (fraction > 1 + eps) {
-                        filledCells[nFilled].x = node[0];
-                        filledCells[nFilled].y = node[1];
-                        filledCells[nFilled].z = node[2];
-                        nFilled++;
+                      filledCells[nFilled] = std::move(node);
+                      nFilled++;
 
                     } else if (fraction < -eps) {
-                        emptiedCells[nEmptied].x = node[0];
-                        emptiedCells[nEmptied].y = node[1];
-                        emptiedCells[nEmptied].z = node[2];
-                        nEmptied++;
+                      emptiedCells[nEmptied] = std::move(node);
+                      nEmptied++;
                     }
                 }
             }

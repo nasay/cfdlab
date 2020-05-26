@@ -1,4 +1,5 @@
 #include "LBDefinitions.h"
+#include "utils.h"
 #include "computeCellValues.h"
 #include <stdio.h>
 
@@ -30,9 +31,9 @@ void computeVelocity(std::vector<float>::iterator currentCell, const float * con
     velocity[2] = 0;
 
     for (i=0; i<Q; i++) {
-      velocity[0] += LATTICEVELOCITIES[i][0] * (*(currentCell + i));
-      velocity[1] += LATTICEVELOCITIES[i][1] * (*(currentCell + i));
-      velocity[2] += LATTICEVELOCITIES[i][2] * (*(currentCell + i));
+      velocity[0] += LATTICEVELOCITIES[i].x * (*(currentCell + i));
+      velocity[1] += LATTICEVELOCITIES[i].y * (*(currentCell + i));
+      velocity[2] += LATTICEVELOCITIES[i].z * (*(currentCell + i));
     }
 
     velocity[0] *= density_inv;
@@ -42,7 +43,7 @@ void computeVelocity(std::vector<float>::iterator currentCell, const float * con
 
 void computeFeq(const float * const density, const float * const velocity, float * const feq){
     /*
-     * feq[i] = w[i] * rho * (1 + c_i*u / (c_s^2) + ... 
+     * feq[i] = w[i] * rho * (1 + c_i*u / (c_s^2) + ...
      */
 
     int i;
@@ -56,9 +57,9 @@ void computeFeq(const float * const density, const float * const velocity, float
 
 #pragma GCC ivdep
     for (i=0; i<Q/2 + 1; i++) {
-        ci0[i] = LATTICEVELOCITIES[i][0];
-        ci1[i] = LATTICEVELOCITIES[i][1];
-        ci2[i] = LATTICEVELOCITIES[i][2];
+        ci0[i] = LATTICEVELOCITIES[i].x;
+        ci1[i] = LATTICEVELOCITIES[i].y;
+        ci2[i] = LATTICEVELOCITIES[i].z;
     }
 #pragma GCC ivdep
     for (i=0; i<Q/2 + 1; i++) {

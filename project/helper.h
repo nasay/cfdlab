@@ -49,6 +49,10 @@ static inline std::vector<float>::iterator getMass(Fields &fields, int * node, i
 static inline  std::vector<float>::iterator getFraction(Fields &fields, int * node, int *n) {
   return fields.fraction.begin () + node[2] * n[0] * n[1] + node[1] * n[0] + node[0];
 }
+
+static inline  std::vector<float>::iterator getFraction(Fields &fields, Cell &node, int *n) {
+  return fields.fraction.begin () + node.z * n[0] * n[1] + node.y * n[0] + node.x;
+}
 /**
  * Maximum length of input lines
  */

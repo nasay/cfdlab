@@ -13,9 +13,9 @@ void setNoSlip(Fields &fields, int * node, int * n) {
     /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i][0];
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i][1];
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i][2];
+        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
+        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
+        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
 
         /* does the pointed cell lay in our domain? */
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
@@ -45,9 +45,9 @@ void setMovingWall(Fields &fields,  const float * const wallVelocity, int * node
 /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i][0];
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i][1];
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i][2];
+        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
+        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
+        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
 
         /* does the pointed cell lay in our domain? */
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
@@ -66,9 +66,9 @@ void setMovingWall(Fields &fields,  const float * const wallVelocity, int * node
                 dotProd = 0;
 
                 /* compute inner product of wall velocity and i-th lattice velocity */
-                for (int j = 0; j < 3; ++j)	{
-                    dotProd += LATTICEVELOCITIES[i][j] * wallVelocity[j];
-                }
+                    dotProd += LATTICEVELOCITIES[i].x * wallVelocity[0];
+                    dotProd += LATTICEVELOCITIES[i].y * wallVelocity[1];
+                    dotProd += LATTICEVELOCITIES[i].z * wallVelocity[2];
 
                 computeDensity(getEl(fields.collide, coord_dest, 0, n), &density);
 
@@ -93,9 +93,9 @@ void setOutflow(Fields &fields,
     /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i][0];
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i][1];
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i][2];
+        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
+        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
+        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
 
         /* does the pointed cell lay in our domain? */
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
@@ -151,9 +151,9 @@ void setInflow(Fields &fields,
     /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i][0];
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i][1];
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i][2];
+        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
+        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
+        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
 
         /* does the pointed cell lay in our domain? */
         if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
@@ -185,17 +185,17 @@ void setFreeSlip(Fields &fields, int * node, int * n) {
     }
 
     for (i = 0; i < Q; i++) {
-        lv0 = LATTICEVELOCITIES[i][0];
-        lv1 = LATTICEVELOCITIES[i][1];
-        lv2 = LATTICEVELOCITIES[i][2];
+        lv0 = LATTICEVELOCITIES[i].x;
+        lv1 = LATTICEVELOCITIES[i].y;
+        lv2 = LATTICEVELOCITIES[i].z;
 
         sum = lv0 * lv0 + lv1 * lv1 + lv2 * lv2;
 
         /* In this part we are interested only in the face of the cell, thus the lattice has just one component */
         if (sum == 1.0){
-            coord_dest[0] = node[0] + LATTICEVELOCITIES[i][0];
-            coord_dest[1] = node[1] + LATTICEVELOCITIES[i][1];
-            coord_dest[2] = node[2] + LATTICEVELOCITIES[i][2];
+            coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
+            coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
+            coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
             /* If the pointed cell does not fall out of bounds */
             if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
                 coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
@@ -204,25 +204,25 @@ void setFreeSlip(Fields &fields, int * node, int * n) {
                 if (flag == FLUID || flag == INTERFACE) {
                     for (j = 0; j < Q; j++) {
                         /* looking for a direction with one of the components inverse to the direction of the face */
-                        if(LATTICEVELOCITIES[i][0]*LATTICEVELOCITIES[j][0] == -1.0 ||
-                           LATTICEVELOCITIES[i][1]*LATTICEVELOCITIES[j][1] == -1.0 ||
-                           LATTICEVELOCITIES[i][2]*LATTICEVELOCITIES[j][2] == -1.0) {
+                        if(LATTICEVELOCITIES[i].x*LATTICEVELOCITIES[j].x == -1.0 ||
+                           LATTICEVELOCITIES[i].y*LATTICEVELOCITIES[j].y == -1.0 ||
+                           LATTICEVELOCITIES[i].z*LATTICEVELOCITIES[j].z == -1.0) {
 
                             /* If the selected direction of the fluid cell falls on another fluid cell, they will interact in the streaming step */
-                            non_fluid_cell[0] = coord_dest[0] + LATTICEVELOCITIES[j][0];
-                            non_fluid_cell[1] = coord_dest[1] + LATTICEVELOCITIES[j][1];
-                            non_fluid_cell[2] = coord_dest[2] + LATTICEVELOCITIES[j][2];
+                            non_fluid_cell[0] = coord_dest[0] + LATTICEVELOCITIES[j].x;
+                            non_fluid_cell[1] = coord_dest[1] + LATTICEVELOCITIES[j].y;
+                            non_fluid_cell[2] = coord_dest[2] + LATTICEVELOCITIES[j].z;
 
                             flag = *getFlag (fields, non_fluid_cell, n);
                             if (flag != FLUID && flag != INTERFACE) {
                                 for (k = 0; k < Q; k++) {
                                     /* Search for a (unique) direction in the boundary cell which is the reflection of the fluid cell */
-                                    if(( LATTICEVELOCITIES[k][0]*LATTICEVELOCITIES[i][0] == 1.0 ||
-                                         LATTICEVELOCITIES[k][1]*LATTICEVELOCITIES[i][1] == 1.0 ||
-                                         LATTICEVELOCITIES[k][2]*LATTICEVELOCITIES[i][2] == 1.0 ) &&
-                                       ( LATTICEVELOCITIES[k][0]*LATTICEVELOCITIES[j][0] == 1.0 ||
-                                         LATTICEVELOCITIES[k][1]*LATTICEVELOCITIES[j][1] == 1.0 ||
-                                         LATTICEVELOCITIES[k][2]*LATTICEVELOCITIES[j][2] == 1.0 )){
+                                    if(( LATTICEVELOCITIES[k].x*LATTICEVELOCITIES[i].x == 1.0 ||
+                                         LATTICEVELOCITIES[k].y*LATTICEVELOCITIES[i].y == 1.0 ||
+                                         LATTICEVELOCITIES[k].z*LATTICEVELOCITIES[i].z == 1.0 ) &&
+                                       ( LATTICEVELOCITIES[k].x*LATTICEVELOCITIES[j].x == 1.0 ||
+                                         LATTICEVELOCITIES[k].y*LATTICEVELOCITIES[j].y == 1.0 ||
+                                         LATTICEVELOCITIES[k].z*LATTICEVELOCITIES[j].z == 1.0 )){
                                         auto cell_ptr = getEl(fields.collide, node, k, n);
                                         *cell_ptr = *getEl(fields.collide, coord_dest, j, n);
                                         break;
@@ -243,9 +243,9 @@ void setFreeSlip(Fields &fields, int * node, int * n) {
         *   In those cases the boundary behaves as non slip, bouncing back everything*/
         if (*getEl(fields.collide, node, i, n) == 0){
             /* compute a cell where lattice is pointing*/
-            coord_dest[0] = node[0] + LATTICEVELOCITIES[i][0];
-            coord_dest[1] = node[1] + LATTICEVELOCITIES[i][1];
-            coord_dest[2] = node[2] + LATTICEVELOCITIES[i][2];
+            coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
+            coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
+            coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
     
             if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
                 coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {

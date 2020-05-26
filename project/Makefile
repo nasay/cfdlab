@@ -15,7 +15,7 @@ OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=lbsim
 
 all: $(EXECUTABLE)
-debug: CFLAGS += -DDEBUG -g -ftree-vectorizer-verbose=5 -fopt-info-vec-optimized
+debug: CFLAGS += -DDEBUG -g -O0 
 debug: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)

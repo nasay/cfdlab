@@ -14,7 +14,7 @@ forces_x    	0
 forces_y    	0
 forces_z    	-0.001
 
-timesteps     	2000
+timesteps     	100
 
 vtkoutput     	15
 

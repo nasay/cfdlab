@@ -12,9 +12,9 @@ void doStremingCell(Fields &fields, int * node, std::vector<float>::iterator el,
 
     for (i = 0; i < Q; i++) {
         /* neighboring cell from which particles are obtained */
-        source_node[0] = node[0] - LATTICEVELOCITIES[i][0];
-        source_node[1] = node[1] - LATTICEVELOCITIES[i][1];
-        source_node[2] = node[2] - LATTICEVELOCITIES[i][2];
+        source_node[0] = node[0] - LATTICEVELOCITIES[i].x;
+        source_node[1] = node[1] - LATTICEVELOCITIES[i].y;
+        source_node[2] = node[2] - LATTICEVELOCITIES[i].z;
 
         /* Amount of particles that goes to this cell */
         fi_nb = *getEl(fields.collide, source_node, i, n);

@@ -52,8 +52,9 @@ void check_flags(Fields &fields, int* length, int flag1, int flag2, int t){
                 if (*getFlag (fields, node, n) == flag1){
                     /*For each neighbour cell */
                     for (i = 0; i < Q; ++i){
-                        for (j = 0; j < D; ++j)
-                            node2[j]=node[j]+LATTICEVELOCITIES[i][j];
+                      node2[0]=node[0]+LATTICEVELOCITIES[i].x;
+                      node2[1]=node[1]+LATTICEVELOCITIES[i].y;
+                      node2[2]=node[2]+LATTICEVELOCITIES[i].z;
                         /* If the cell flag coincides with flag2, trow a warning*/
                         if (*getFlag (fields, node, n) == flag2)
                             printf("Warning: In timestep %d position %d %d %d a cell %d is adjacent to a forbiden cell %d in %d %d %d \n", t, node[0],node[1],node[2],flag1, node2[0],node2[1],node2[2], flag2);

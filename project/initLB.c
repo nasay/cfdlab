@@ -93,9 +93,9 @@ void initializeCellMass(Fields &fields, int * node, int * n) {
     *mass = 0.0;
 
     for (i = 0; i < Q; i++) {
-        neighbor_node[0] = node[0] + LATTICEVELOCITIES[i][0];
-        neighbor_node[1] = node[1] + LATTICEVELOCITIES[i][1];
-        neighbor_node[2] = node[2] + LATTICEVELOCITIES[i][2];
+        neighbor_node[0] = node[0] + LATTICEVELOCITIES[i].x;
+        neighbor_node[1] = node[1] + LATTICEVELOCITIES[i].y;
+        neighbor_node[2] = node[2] + LATTICEVELOCITIES[i].z;
 
         if (neighbor_node[0] < n[0] && neighbor_node[1] < n[1] && neighbor_node[2] < n[2] &&
             neighbor_node[0] >= 0 && neighbor_node[1] >= 0 && neighbor_node[2] >= 0) {
@@ -155,9 +155,9 @@ void initDropletFlags(Fields &fields, int * n, int r) {
                     *getFlag(fields, node, n) = FLUID;
                     /* Check whether its neighbors are in the sphere. If not mark them as INTERFACE */
                     for (i = 0; i < Q; i++) {
-                        neighbor_node[0] = node[0] + LATTICEVELOCITIES[i][0];
-                        neighbor_node[1] = node[1] + LATTICEVELOCITIES[i][1];
-                        neighbor_node[2] = node[2] + LATTICEVELOCITIES[i][2];
+                        neighbor_node[0] = node[0] + LATTICEVELOCITIES[i].x;
+                        neighbor_node[1] = node[1] + LATTICEVELOCITIES[i].y;
+                        neighbor_node[2] = node[2] + LATTICEVELOCITIES[i].z;
 
                         if ((neighbor_node[0]-x0)*(neighbor_node[0]-x0) +
                             (neighbor_node[1]-y0)*(neighbor_node[1]-y0) +
@@ -207,9 +207,9 @@ void initMartiniFlags(Fields &fields, int *n, int r) {
 
                 /* Check whether its neighbors are in the sphere. If not mark them as NOSLIP */
                 for (i = 0; i < Q; i++) {
-                    neighbor_node[0] = node[0] + LATTICEVELOCITIES[i][0];
-                    neighbor_node[1] = node[1] + LATTICEVELOCITIES[i][1];
-                    neighbor_node[2] = node[2] + LATTICEVELOCITIES[i][2];
+                    neighbor_node[0] = node[0] + LATTICEVELOCITIES[i].x;
+                    neighbor_node[1] = node[1] + LATTICEVELOCITIES[i].y;
+                    neighbor_node[2] = node[2] + LATTICEVELOCITIES[i].z;
                     auto flag = getFlag(fields, neighbor_node, n);
 
                     if (*flag != GAS) {

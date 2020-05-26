@@ -3,13 +3,13 @@
 #include "collision.h"
 
 /* Dotprod function, calcuales the dot product of two vectors */
-float dotProd (const float * array1, float * array2, int length){
+float dotProd (const Velocity &v, float * array2, int length){
     int i;
     float product =0;
 
-    for (i = 0; i < length; ++i){
-        product += array1[i] * array2[i];
-    }
+        product += v.x * array2[0];
+        product += v.y * array2[1];
+        product += v.z * array2[2];
     return product;
 }
 
