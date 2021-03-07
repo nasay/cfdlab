@@ -33,7 +33,7 @@ void computePostCollisionDistributions(int *node, std::vector<float>::iterator c
 
 void doCollision(Fields &fields, const float * const tau, int * length, float * extForces, int n_threads){
     float density, densityAtm =1;
-    float velocity[D];
+    Velocity velocity;
     float feq[Q], feqAtm[Q];
     int x, y, z, node[3], flag, isFluid;
     int n[3] = { length[0] + 2, length[1] + 2, length[2] + 2 };

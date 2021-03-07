@@ -17,7 +17,7 @@ void computeDensity(std::vector<float>::iterator currentCell, float *density){
     }
 }
 
-void computeVelocity(std::vector<float>::iterator currentCell, const float * const density, float *velocity){
+void computeVelocity(std::vector<float>::iterator currentCell, const float * const density, Velocity &velocity){
     /*
      * Computes the velocity within currentCell 
      * u(x,t) = sum(f[i] * c[i] for i in [0:Q-1]) / rho
@@ -26,22 +26,22 @@ void computeVelocity(std::vector<float>::iterator currentCell, const float * con
     int i;
     float density_inv = 1 / (*density);
 
-    velocity[0] = 0;
-    velocity[1] = 0;
-    velocity[2] = 0;
+    velocity.x = 0;
+    velocity.y = 0;
+    velocity.z = 0;
 
     for (i=0; i<Q; i++) {
-      velocity[0] += LATTICEVELOCITIES[i].x * (*(currentCell + i));
-      velocity[1] += LATTICEVELOCITIES[i].y * (*(currentCell + i));
-      velocity[2] += LATTICEVELOCITIES[i].z * (*(currentCell + i));
+      velocity.x += LATTICEVELOCITIES[i].x * (*(currentCell + i));
+      velocity.y += LATTICEVELOCITIES[i].y * (*(currentCell + i));
+      velocity.z += LATTICEVELOCITIES[i].z * (*(currentCell + i));
     }
 
-    velocity[0] *= density_inv;
-    velocity[1] *= density_inv;
-    velocity[2] *= density_inv;
+    velocity.x *= density_inv;
+    velocity.y *= density_inv;
+    velocity.z *= density_inv;
 }
 
-void computeFeq(const float * const density, const float * const velocity, float * const feq){
+void computeFeq(const float * const density, const Velocity &velocity, float * const feq){
     /*
      * feq[i] = w[i] * rho * (1 + c_i*u / (c_s^2) + ...
      */
@@ -50,9 +50,9 @@ void computeFeq(const float * const density, const float * const velocity, float
     float ci_dot_u_cs2[Q];
     float ci0[Q], ci1[Q], ci2[Q], a1[Q], a2[Q], a3[Q];
 
-    const float u0 = velocity[0];
-    const float u1 = velocity[1];
-    const float u2 = velocity[2];
+    const float u0 = velocity.x;
+    const float u1 = velocity.y;
+    const float u2 = velocity.z;
     const float u_dot_u_cs2 = (u0*u0 + u1*u1 + u2*u2) * 0.5 * C_S2_inv;
 
 #pragma GCC ivdep

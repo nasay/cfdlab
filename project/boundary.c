@@ -7,19 +7,20 @@
 /**
  * Set NOSLIP condition
  */
-void setNoSlip(Fields &fields, int * node, int * n) {
-    int i, coord_dest[3], flag;
+void setNoSlip(Fields &fields, Cell &node, int * n) {
+    int i, flag;
+    Cell coord_dest;
 
     /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
+        coord_dest.x = node.x + LATTICEVELOCITIES[i].x;
+        coord_dest.y = node.y + LATTICEVELOCITIES[i].y;
+        coord_dest.z = node.z + LATTICEVELOCITIES[i].z;
 
         /* does the pointed cell lay in our domain? */
-        if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
-            coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
+        if (coord_dest.x < n[0] && coord_dest.y < n[1] && coord_dest.z < n[2] &&
+            coord_dest.x >= 0 && coord_dest.y >= 0 && coord_dest.z >= 0) {
             flag = *getFlag (fields, coord_dest, n);
             /* if pointed cell is FLUID or INTERFACE */
             if (flag == FLUID || flag == INTERFACE) {
@@ -37,21 +38,22 @@ void setNoSlip(Fields &fields, int * node, int * n) {
 /**
  * Set MOVING_WALL condition
  */
-void setMovingWall(Fields &fields,  const float * const wallVelocity, int * node, int * n) {
-    int i, coord_dest[3], flag;
+void setMovingWall(Fields &fields, const Velocity &wallVelocity, Cell &node, int * n) {
+    int i, flag;
+    Cell coord_dest;
     float dotProd;
     float density;
 
 /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
+        coord_dest.x = node.x + LATTICEVELOCITIES[i].x;
+        coord_dest.y = node.y + LATTICEVELOCITIES[i].y;
+        coord_dest.z = node.z + LATTICEVELOCITIES[i].z;
 
         /* does the pointed cell lay in our domain? */
-        if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
-            coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0 ) {
+        if (coord_dest.x < n[0] && coord_dest.y < n[1] && coord_dest.z < n[2] &&
+            coord_dest.x >= 0 && coord_dest.y >= 0 && coord_dest.z >= 0 ) {
 
             flag = *getFlag(fields, coord_dest, n);
             /* if pointed cell is FLUID */
@@ -66,9 +68,9 @@ void setMovingWall(Fields &fields,  const float * const wallVelocity, int * node
                 dotProd = 0;
 
                 /* compute inner product of wall velocity and i-th lattice velocity */
-                    dotProd += LATTICEVELOCITIES[i].x * wallVelocity[0];
-                    dotProd += LATTICEVELOCITIES[i].y * wallVelocity[1];
-                    dotProd += LATTICEVELOCITIES[i].z * wallVelocity[2];
+                    dotProd += LATTICEVELOCITIES[i].x * wallVelocity.x;
+                    dotProd += LATTICEVELOCITIES[i].y * wallVelocity.y;
+                    dotProd += LATTICEVELOCITIES[i].z * wallVelocity.z;
 
                 computeDensity(getEl(fields.collide, coord_dest, 0, n), &density);
 
@@ -84,22 +86,21 @@ void setMovingWall(Fields &fields,  const float * const wallVelocity, int * node
  */
 void setOutflow(Fields &fields,
                 const float * const ro_ref,
-                int * node,
+                Cell &node,
                 int * n) {
-    int i, coord_dest[3], flag;
+    int i, flag;
     float feq[Q];
-    float velocity[D];
+    Velocity velocity;
+    Cell coord_dest;
 
     /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
+        coord_dest = node + LATTICEVELOCITIES[i];
 
         /* does the pointed cell lay in our domain? */
-        if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
-            coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0 ) {
+        if (coord_dest.x < n[0] && coord_dest.y < n[1] && coord_dest.z < n[2] &&
+            coord_dest.x >= 0 && coord_dest.y >= 0 && coord_dest.z >= 0 ) {
             flag = *getFlag(fields, coord_dest, n);
 
             if (flag == FLUID || flag == INTERFACE) {
@@ -130,34 +131,35 @@ void setInflow(Fields &fields,
                const float * const Re,
                const float * const ro_ref,
                const float * const ro_in,
-               const float * const inVelocity,
-               int * node,
+               const Velocity &inVelocity,
+               Cell &node,
                int * n) {
-    int i, coord_dest[3], flag;
+    int i, flag;
+    Cell coord_dest;
     float feq[Q];
-    float velocity[3];
+    Velocity velocity;
 
     /* If scenario is parabolic */
     if (strcmp(scenario, PARABOLIC_SCENARIO) == 0) {
-        velocity[0] = 0;
-        velocity[1] = 0;
-        velocity[2] = - 0.5 * (*Re) * (*ro_in - *ro_ref) / n[0] * node[0] * (node[0] - n[2]);
+        velocity.x = 0;
+        velocity.y = 0;
+        velocity.z = - 0.5 * (*Re) * (*ro_in - *ro_ref) / n[0] * node.x * (node.x - n[2]);
     } else {
-        velocity[0] = inVelocity[0];
-        velocity[1] = inVelocity[1];
-        velocity[2] = inVelocity[2];
+        velocity.x = inVelocity.x;
+        velocity.y = inVelocity.y;
+        velocity.z = inVelocity.z;
     }
 
     /* for each lattice */
     for (i = 0; i < Q; i++) {
         /* compute a cell where lattice is pointing*/
-        coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
-        coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
-        coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
+        coord_dest.x = node.x + LATTICEVELOCITIES[i].x;
+        coord_dest.y = node.y + LATTICEVELOCITIES[i].y;
+        coord_dest.z = node.z + LATTICEVELOCITIES[i].z;
 
         /* does the pointed cell lay in our domain? */
-        if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
-            coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
+        if (coord_dest.x < n[0] && coord_dest.y < n[1] && coord_dest.z < n[2] &&
+            coord_dest.x >= 0 && coord_dest.y >= 0 && coord_dest.z >= 0) {
             flag = *getFlag (fields, coord_dest, n); 
 
             if (flag == FLUID || flag == INTERFACE) {
@@ -175,8 +177,10 @@ void setInflow(Fields &fields,
 /**
  * Set FREE-SLIP condition
  */
-void setFreeSlip(Fields &fields, int * node, int * n) {
-    int i, j, k, coord_dest[3], non_fluid_cell[3], flag;
+void setFreeSlip(Fields &fields, Cell& node, int * n) {
+    int i, j, k, flag;
+    Cell coord_dest;
+    Cell non_fluid_cell;
     float sum, lv0, lv1, lv2;
 
     for (i = 0; i < Q; i++) {
@@ -193,12 +197,12 @@ void setFreeSlip(Fields &fields, int * node, int * n) {
 
         /* In this part we are interested only in the face of the cell, thus the lattice has just one component */
         if (sum == 1.0){
-            coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
-            coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
-            coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
+            coord_dest.x = node.x + LATTICEVELOCITIES[i].x;
+            coord_dest.y = node.y + LATTICEVELOCITIES[i].y;
+            coord_dest.z = node.z + LATTICEVELOCITIES[i].z;
             /* If the pointed cell does not fall out of bounds */
-            if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
-                coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
+            if (coord_dest.x < n[0] && coord_dest.y < n[1] && coord_dest.z < n[2] &&
+                coord_dest.x >= 0 && coord_dest.y >= 0 && coord_dest.z >= 0) {
                 flag = *getFlag (fields, coord_dest, n);
                 /* if pointed cell is FLUID */
                 if (flag == FLUID || flag == INTERFACE) {
@@ -209,9 +213,9 @@ void setFreeSlip(Fields &fields, int * node, int * n) {
                            LATTICEVELOCITIES[i].z*LATTICEVELOCITIES[j].z == -1.0) {
 
                             /* If the selected direction of the fluid cell falls on another fluid cell, they will interact in the streaming step */
-                            non_fluid_cell[0] = coord_dest[0] + LATTICEVELOCITIES[j].x;
-                            non_fluid_cell[1] = coord_dest[1] + LATTICEVELOCITIES[j].y;
-                            non_fluid_cell[2] = coord_dest[2] + LATTICEVELOCITIES[j].z;
+                            non_fluid_cell.x = coord_dest.x + LATTICEVELOCITIES[j].x;
+                            non_fluid_cell.y = coord_dest.y + LATTICEVELOCITIES[j].y;
+                            non_fluid_cell.z = coord_dest.z + LATTICEVELOCITIES[j].z;
 
                             flag = *getFlag (fields, non_fluid_cell, n);
                             if (flag != FLUID && flag != INTERFACE) {
@@ -243,12 +247,12 @@ void setFreeSlip(Fields &fields, int * node, int * n) {
         *   In those cases the boundary behaves as non slip, bouncing back everything*/
         if (*getEl(fields.collide, node, i, n) == 0){
             /* compute a cell where lattice is pointing*/
-            coord_dest[0] = node[0] + LATTICEVELOCITIES[i].x;
-            coord_dest[1] = node[1] + LATTICEVELOCITIES[i].y;
-            coord_dest[2] = node[2] + LATTICEVELOCITIES[i].z;
+            coord_dest.x = node.x + LATTICEVELOCITIES[i].x;
+            coord_dest.y = node.y + LATTICEVELOCITIES[i].y;
+            coord_dest.z = node.z + LATTICEVELOCITIES[i].z;
     
-            if (coord_dest[0] < n[0] && coord_dest[1] < n[1] && coord_dest[2] < n[2] &&
-                coord_dest[0] >= 0 && coord_dest[1] >= 0 && coord_dest[2] >= 0) {
+            if (coord_dest.x < n[0] && coord_dest.y < n[1] && coord_dest.z < n[2] &&
+                coord_dest.x >= 0 && coord_dest.y >= 0 && coord_dest.z >= 0) {
                 flag = *getFlag (fields, coord_dest, n); 
                 /* if pointed cell is FLUID */
                 if (flag == FLUID || flag == INTERFACE) {
@@ -269,8 +273,8 @@ void boundaryCell(Fields &fields,
                   const float * const Re,
                   const float * const ro_ref,
                   const float * const ro_in,
-                  const float * const velocity,
-                  int * node,
+                  const Velocity &velocity,
+                  Cell &node,
                   int flag,
                   int * n) {
 
@@ -296,24 +300,25 @@ void treatBoundary(Fields &fields,
                    const float * const Re,
                    const float * const ro_ref,
                    const float * const ro_in,
-                   const float * const velocity,
-                   int * length, 
-                   int n_threads) { 
-    int x, y, z, flag, node[3];
+                   const Velocity &velocity,
+                   int * length,
+                   int n_threads) {
+    int x, y, z, flag;
+    Cell node;
     int n[3] = { length[0] + 2, length[1] + 2, length[2] + 2 };
 
     /* Pragma to parallelize the for loops for z and y using the indicated number of threads*/
     #pragma omp parallel for schedule(dynamic) collapse(2) private(node, x, flag) num_threads(n_threads)
     for (z = 0; z < n[2]; z++) {
         for (y = 0; y < n[1]; y++) {
-            node[2] = z;
-            node[1] = y;
+            node.z = z;
+            node.y = y;
             for (x = 0; x < n[0]; x++) {
-                node[0] = x;
+                node.x = x;
                 flag = *getFlag (fields, node, n);
                 /* If the cell is fluid, obstacle or interface then it does not require boundary treatment */
                 if (flag != FLUID && flag != OBSTACLE && flag != INTERFACE) {
-                    boundaryCell(fields, scenario, Re, ro_ref, ro_in, velocity, node, flag, n);
+                    boundaryCell (fields, scenario, Re, ro_ref, ro_in, velocity, node, flag, n);
                 }
             }
         }

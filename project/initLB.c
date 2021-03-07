@@ -28,9 +28,9 @@ int readParameters(Config &config, int argc, char *argv[])
     read_float(szFileName,"tau", &config.tau);
     read_float(szFileName,"exchange_factor", &config.exchange);
 
-    read_float(szFileName, "velocity_x", &(config.velocity[0]));
-    read_float(szFileName, "velocity_y", &(config.velocity[1]));
-    read_float(szFileName, "velocity_z", &(config.velocity[2]));
+    read_float(szFileName, "velocity_x", &(config.velocity.x));
+    read_float(szFileName, "velocity_y", &(config.velocity.y));
+    read_float(szFileName, "velocity_z", &(config.velocity.z));
 
     read_float(szFileName, "forces_x", &(config.extForces[0]));
     read_float(szFileName, "forces_y", &(config.extForces[1]));

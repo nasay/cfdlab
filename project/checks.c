@@ -7,7 +7,9 @@
 void check_in_rank(Fields &fields, int * length, int t){
     int node[D], i, x, y, z;
     int n[D] = { length[0] + 2, length[1] + 2, length[2] + 2 };
-    float velocity[D], density, norm_v=0;
+    float density, norm_v=0;
+    Velocity velocity;
+
     /* Pragma usted to parallelize the loop */
     #pragma omp parallel for private(node, y, x, density, norm_v, currentCell, velocity, i)
     /* For each cell in the cavity */
@@ -24,8 +26,9 @@ void check_in_rank(Fields &fields, int * length, int t){
                     computeVelocity(currentCell, &density, velocity);
                     norm_v = 0;
                     /* Compute the norm of the velocity */
-                    for (i = 0; i < D; ++i)
-                        norm_v += velocity[i]*velocity[i];
+                        norm_v += velocity.x*velocity.x;
+                        norm_v += velocity.y*velocity.y;
+                        norm_v += velocity.z*velocity.z;
                     /* If the density is outside the normal values, trow a warning */
                     if(density>1.1 || density<0.9)
                         printf("Warning: In timestep %d position %d %d %d is an anormal density of %f \n", t, node[0],node[1],node[2],density);

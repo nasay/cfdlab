@@ -25,7 +25,8 @@ void doStremingCell(Fields &fields, int * node, std::vector<float>::iterator el,
             /* Obtain the flag of the neighbor cell */
             flag = *getFlag (fields, source_node, n); 
             if (flag == GAS) {
-                float velocity[3], feq[Q], rho_ref = 1;
+              Velocity velocity;
+              float feq[Q], rho_ref = 1;
                 /* get pointer to the fluid cell */
                 auto fluidCell = getEl (fields.collide, node, 0, n);
                 /* compute velocity of the fluid cell */

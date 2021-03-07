@@ -2,18 +2,24 @@
 
 #include "LBDefinitions.h"
 #include <vector>
+#include <type_traits>
 
-struct Cell {
-  int x;
-  int y;
-  int z;
-
-  bool operator== (const Cell &other) const {
-      return x == other.x && y == other.y && z == other.z;
+template <class T>
+struct Vector_3D {
+  T x;
+  T y;
+  T z;
+  bool operator== (const Vector_3D<T> &other) const {
+    return x == other.x && y == other.y && z == other.z;
   }
+  Vector_3D<T> operator+ (const Vector_3D<T> &rhs) {
+    return { this->x + rhs.x, this->y + rhs.y, this->z + rhs.z };
+}
 };
 
-using Velocity = Cell;
+
+typedef Vector_3D<int> Cell;
+typedef Vector_3D<float> Velocity;
 
 static const Velocity LATTICEVELOCITIES[Q] = {
                                               {0, -1, -1}, {-1, 0, -1}, {0, 0, -1}, {1, 0, -1}, {0, 1, -1},
@@ -42,7 +48,7 @@ struct Config {
   float tau;
   float extForces[3];
   float exchange;
-  float velocity[3];
+  Velocity velocity;
   float ro_in;
   float ro_ref;
 };

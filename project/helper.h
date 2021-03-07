@@ -25,6 +25,10 @@ __attribute__((always_inline))static inline std::vector<float>::iterator getEl(s
   return array.begin () + Q * (node[2] * n[0] * n[1] + node[1] * n[0] + node[0]) + i;
 }
 
+__attribute__((always_inline))static inline std::vector<float>::iterator getEl(std::vector<float> &array, Cell &node, int i, int *n) {
+  return array.begin () + Q * (node.z * n[0] * n[1] + node.y * n[0] + node.x) + i;
+}
+
 /**
  * Return pointer to a flag of (x,y,z) element
  */
